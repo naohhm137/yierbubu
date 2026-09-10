@@ -411,41 +411,397 @@
   line-height: 1.4;
 }
 
-/* ---------- 响应式 ---------- */
-@media (max-width: 768px) {
+/* ---------- 规则帮助面板 ---------- */
+.game3d-rules-panel {
+  position: absolute;
+  top: 80px;
+  right: 24px;
+  width: 340px;
+  max-height: 60vh;
+  background: rgba(255, 248, 240, 0.98);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.game3d-rules-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.game3d-rules-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #5a4a3a;
+}
+
+.game3d-rules-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: #8b7355;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.game3d-rules-content {
+  padding: 14px 18px;
+  overflow-y: auto;
+}
+
+.game3d-rule-item {
+  margin-bottom: 14px;
+}
+
+.game3d-rule-item strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #4A90D9;
+  margin-bottom: 4px;
+}
+
+.game3d-rule-item p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b5b4f;
+  line-height: 1.5;
+}
+
+/* ---------- 加载屏幕 ---------- */
+.game3d-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #fef3e2 0%, #fce4d6 100%);
+  z-index: 1000;
+  gap: 20px;
+}
+
+.game3d-loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(245, 166, 35, 0.2);
+  border-top-color: #F5A623;
+  border-radius: 50%;
+  animation: game3d-spin 1s linear infinite;
+}
+
+@keyframes game3d-spin {
+  to { transform: rotate(360deg); }
+}
+
+.game3d-loading-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #8B7355;
+}
+
+.game3d-loading-sub {
+  font-size: 0.85rem;
+  color: #A09080;
+}
+
+/* ---------- 响应式 — 平板 ---------- */
+@media (max-width: 1024px) {
+  .game3d-top-bar {
+    padding: 12px 16px;
+  }
+
+  .game3d-round-info,
+  .game3d-turn-info {
+    gap: 8px;
+  }
+
+  .game3d-round,
+  .game3d-scene-badge {
+    font-size: 0.85rem;
+    padding: 5px 10px;
+  }
+
+  .game3d-active-player {
+    font-size: 0.9rem;
+  }
+}
+
+/* ---------- 响应式 — 手机横屏 ---------- */
+@media (max-width: 900px) and (orientation: landscape) {
+  .game3d-top-bar {
+    padding: 8px 16px;
+  }
+
+  .game3d-scene-badge {
+    display: none;
+  }
+
   .game3d-wish-panel {
-    top: 70px;
-    left: 12px;
-    min-width: 120px;
-    padding: 8px 12px;
+    top: 56px;
+    left: 10px;
+    padding: 6px 10px;
+    min-width: 100px;
+  }
+
+  .game3d-wish-title {
+    font-size: 0.75rem;
+  }
+
+  .game3d-wish-text {
+    font-size: 0.7rem;
   }
 
   .game3d-my-status {
-    bottom: 160px;
-    left: 12px;
-    padding: 8px 12px;
+    bottom: 120px;
+    left: 10px;
+    padding: 6px 10px;
+    gap: 8px;
   }
 
   .game3d-my-avatar {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
   }
 
-  .game3d-action-buttons {
-    gap: 6px;
-  }
-
-  .game3d-btn {
-    padding: 8px 12px;
+  .game3d-my-name {
     font-size: 0.8rem;
   }
 
-  .game3d-log-panel {
-    width: calc(100% - 48px);
-    right: 24px;
+  .game3d-my-stats {
+    font-size: 0.7rem;
+    gap: 6px;
   }
 
+  .game3d-action-bar {
+    padding: 8px 16px 12px;
+  }
+
+  .game3d-action-hint {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+
+  .game3d-action-buttons {
+    gap: 5px;
+  }
+
+  .game3d-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    border-radius: 10px;
+  }
+
+  .game3d-log-panel {
+    top: 56px;
+    right: 10px;
+    width: 240px;
+    max-height: 50vh;
+  }
+}
+
+/* ---------- 响应式 — 手机竖屏（重点修复） ---------- */
+@media (max-width: 600px) and (orientation: portrait) {
+  .game3d-top-bar {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .game3d-round-info {
+    order: 1;
+    gap: 6px;
+  }
+
+  .game3d-turn-info {
+    order: 2;
+    width: 100%;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .game3d-log-btn {
+    order: 3;
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+
+  .game3d-round {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+  }
+
+  .game3d-scene-badge {
+    display: none;
+  }
+
+  .game3d-active-player {
+    font-size: 0.85rem;
+  }
+
+  .game3d-my-turn {
+    font-size: 0.8rem;
+  }
+
+  /* 心愿面板 — 缩小并移到不挡视线的位置 */
+  .game3d-wish-panel {
+    top: auto;
+    bottom: 180px;
+    left: 10px;
+    right: auto;
+    padding: 6px 10px;
+    min-width: 110px;
+  }
+
+  .game3d-wish-title {
+    font-size: 0.75rem;
+    margin-bottom: 3px;
+  }
+
+  .game3d-wish-bar {
+    height: 6px;
+  }
+
+  .game3d-wish-text {
+    font-size: 0.68rem;
+    margin-top: 3px;
+  }
+
+  /* 我的状态 — 缩小 */
+  .game3d-my-status {
+    bottom: 180px;
+    right: 10px;
+    left: auto;
+    padding: 6px 10px;
+    gap: 8px;
+    max-width: 140px;
+  }
+
+  .game3d-my-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .game3d-my-name {
+    font-size: 0.8rem;
+  }
+
+  .game3d-my-stats {
+    font-size: 0.7rem;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .game3d-identity-badge {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+  }
+
+  /* 底部操作栏 — 可横向滚动，按钮更小 */
+  .game3d-action-bar {
+    padding: 8px 10px 14px;
+  }
+
+  .game3d-action-hint {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+
+  .game3d-action-buttons {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .game3d-action-buttons::-webkit-scrollbar {
+    display: none;
+  }
+
+  .game3d-btn {
+    padding: 7px 10px;
+    font-size: 0.75rem;
+    border-radius: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .game3d-btn-end {
+    padding: 7px 14px;
+  }
+
+  /* 日志面板 */
+  .game3d-log-panel {
+    top: 100px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: 40vh;
+  }
+
+  /* 规则面板 */
+  .game3d-rules-panel {
+    top: 100px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: 50vh;
+  }
+
+  .game3d-rule-item p {
+    font-size: 0.75rem;
+  }
+
+  /* 场景提示 */
   .game3d-scene-tip {
     display: none;
+  }
+
+  /* 目标选择面板 */
+  .game3d-target-panel {
+    padding: 20px;
+    max-width: 90%;
+  }
+
+  .game3d-target-title {
+    font-size: 1rem;
+  }
+}
+
+/* ---------- 超小屏 ---------- */
+@media (max-width: 380px) {
+  .game3d-btn {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+
+  .game3d-my-status {
+    max-width: 120px;
+  }
+
+  .game3d-my-stats {
+    font-size: 0.65rem;
+  }
+}
+
+/* ---------- 触摸设备优化 ---------- */
+@media (hover: none) and (pointer: coarse) {
+  .game3d-btn:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .game3d-btn:active:not(:disabled) {
+    transform: scale(0.95);
   }
 }

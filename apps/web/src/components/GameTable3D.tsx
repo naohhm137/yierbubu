@@ -17,6 +17,14 @@ export function GameTable3D() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [showCardDetail, setShowCardDetail] = useState<Card | null>(null);
   const [showLog, setShowLog] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 3D场景加载完成后隐藏加载屏
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (!room || !privateView) return null;
 
@@ -97,6 +105,15 @@ export function GameTable3D() {
 
   return (
     <div className="game3d-container">
+      {/* 加载屏幕 — 防止黑屏 */}
+      {isLoading && (
+        <div className="game3d-loading">
+          <div className="game3d-loading-spinner" />
+          <div className="game3d-loading-text">正在进入萌境...</div>
+          <div className="game3d-loading-sub">加载3D场景和角色中</div>
+        </div>
+      )}
+
       {/* 3D 主场景 */}
       <div className="game3d-canvas-wrapper">
         <GameCanvas
@@ -124,6 +141,9 @@ export function GameTable3D() {
         </div>
         <button className="game3d-log-btn" onClick={() => setShowLog(!showLog)}>
           📜
+        </button>
+        <button className="game3d-log-btn" onClick={() => setShowRules(!showRules)}>
+          ❓
         </button>
       </div>
 
@@ -168,6 +188,42 @@ export function GameTable3D() {
                 {log.message}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 规则帮助面板 */}
+      {showRules && (
+        <div className="game3d-rules-panel">
+          <div className="game3d-rules-header">
+            <div className="game3d-rules-title">📖 快速规则</div>
+            <button className="game3d-rules-close" onClick={() => setShowRules(false)}>✕</button>
+          </div>
+          <div className="game3d-rules-content">
+            <div className="game3d-rule-item">
+              <strong>🎯 目标</strong>
+              <p>修复大心愿星（完成4个心愿任务），或阻止修复。每个身份有不同胜利条件。</p>
+            </div>
+            <div className="game3d-rule-item">
+              <strong>🔄 回合</strong>
+              <p>每回合：翻场景牌 → 补手牌 → 依次行动。你的回合可以抽牌、出牌、用技能、赠送/交换卡牌。</p>
+            </div>
+            <div className="game3d-rule-item">
+              <strong>❤️ 活力</strong>
+              <p>活力归零进入"梦境旁观者"状态，仍可每轮帮助一次。</p>
+            </div>
+            <div className="game3d-rule-item">
+              <strong>💕 友情值</strong>
+              <p>帮助他人获得友情值（上限6），可用于发动强力技能、抵消负面效果、救回队友。</p>
+            </div>
+            <div className="game3d-rule-item">
+              <strong>🎭 身份</strong>
+              <p>引路人：修复心愿星 | 守护伙伴：保护引路人 | 捣蛋客：阻止修复 | 追梦者：完成个人秘密目标</p>
+            </div>
+            <div className="game3d-rule-item">
+              <strong>✨ 技能</strong>
+              <p>每个角色有独特技能，每回合可用一次。点击"技能"按钮后选择目标。</p>
+            </div>
           </div>
         </div>
       )}

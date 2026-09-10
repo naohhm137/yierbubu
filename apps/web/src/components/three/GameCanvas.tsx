@@ -11,6 +11,7 @@ import { HandCards } from './HandCards';
 import { SceneCardDisplay } from './SceneCardDisplay';
 import { CenterCards } from './CenterCards';
 import { PlayerHandBacks } from './PlayerHandBacks';
+import { useDeviceQuality } from '../../hooks/useDeviceQuality';
 
 interface GameCanvasProps {
   room: PublicRoomView;
@@ -53,8 +54,7 @@ function useSeatPositions(count: number) {
 }
 
 /** 漂浮粒子 — 心愿星尘氛围 */
-function FloatingParticles() {
-  const count = 60;
+function FloatingParticles({ count = 60 }: { count?: number }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
@@ -94,6 +94,7 @@ function FloatingParticles() {
 }
 
 export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTurn }: GameCanvasProps) {
+  const device = useDeviceQuality();
   const otherPlayers = room.players.filter((p) => p.id !== privateView.playerId);
   const seats = useSeatPositions(otherPlayers.length + 1);
   const currentScene = room.sceneId ? SCENES.find((s) => s.id === room.sceneId) : null;
@@ -106,31 +107,35 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
 
   const otherSeats = seats.slice(1);
 
+  // 移动端相机更高更远，确保看到所有玩家
+  const camPos: [number, number, number] = device.isMobile ? [0, 3.5, 6.5] : [0, 2.8, 5.5];
+  const camFov = device.isMobile ? 60 : 55;
+
   return (
     <Canvas
-      shadows
-      camera={{ position: [0, 2.8, 5.5], fov: 55 }}
+      shadows={device.shadows}
+      camera={{ position: camPos, fov: camFov }}
       gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.9 }}
       style={{ background: 'linear-gradient(180deg, #fef3e2 0%, #fce4d6 50%, #f8d5c0 100%)' }}
-      dpr={[1, 2]}
+      dpr={[1, device.dpr]}
     >
       <MouseLook />
       <Suspense fallback={null}>
         {/* 灯光 — 柔和暖色调，避免过曝 */}
-        <ambientLight intensity={0.35} color="#fff5e6" />
+        <ambientLight intensity={0.4} color="#fff5e6" />
         <hemisphereLight args={['#ffeedd', '#d4c4a8', 0.4]} />
         <directionalLight
           position={[4, 7, 4]}
           intensity={0.7}
           color="#ffeedd"
-          castShadow
-          shadow-mapSize={[2048, 2048]}
+          castShadow={device.shadows}
+          shadow-mapSize={[device.shadowMapSize, device.shadowMapSize]}
           shadow-bias={-0.0001}
         />
         <pointLight position={[0, 3.5, 0]} intensity={0.5} color="#ffd4a3" distance={10} decay={2} />
         <pointLight position={[-4, 2.5, -3]} intensity={0.25} color="#ffc4d6" distance={8} decay={2} />
         <pointLight position={[4, 2, -2]} intensity={0.2} color="#c4d4ff" distance={6} decay={2} />
-        <spotLight position={[0, 6, 0]} angle={0.5} penumbra={0.8} intensity={0.35} color="#fff0d4" castShadow />
+        {device.shadows && <spotLight position={[0, 6, 0]} angle={0.5} penumbra={0.8} intensity={0.35} color="#fff0d4" castShadow />}
 
         {/* 桌面场景 */}
         <TableScene />
@@ -180,25 +185,29 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
         />
 
         {/* 漂浮星尘粒子 */}
-        <FloatingParticles />
+        <FloatingParticles count={device.particleCount} />
 
-        {/* 接触阴影 — 角色脚下柔和阴影 */}
-        <ContactShadows
-          position={[0, 0.01, 0]}
-          opacity={0.5}
-          scale={12}
-          blur={2.5}
-          far={4}
-          color="#8b6f47"
-        />
+        {/* 接触阴影 — 角色脚下柔和阴影（仅桌面端） */}
+        {device.shadows && (
+          <ContactShadows
+            position={[0, 0.01, 0]}
+            opacity={0.5}
+            scale={12}
+            blur={2.5}
+            far={4}
+            color="#8b6f47"
+          />
+        )}
       </Suspense>
 
-      {/* 后处理 — 轻微辉光 + 暗角 + 抗锯齿 */}
-      <EffectComposer>
-        <Bloom intensity={0.15} luminanceThreshold={0.85} luminanceSmoothing={0.3} mipmapBlur />
-        <Vignette eskil={false} offset={0.25} darkness={0.4} />
-        <SMAA />
-      </EffectComposer>
+      {/* 后处理 — 仅桌面端（移动端可能不兼容） */}
+      {device.postprocessing && (
+        <EffectComposer>
+          <Bloom intensity={0.15} luminanceThreshold={0.85} luminanceSmoothing={0.3} mipmapBlur />
+          <Vignette eskil={false} offset={0.25} darkness={0.4} />
+          <SMAA />
+        </EffectComposer>
+      )}
     </Canvas>
   );
 }
