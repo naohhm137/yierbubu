@@ -1,6 +1,6 @@
-import React, { useRef, useMemo, Suspense, useState, useEffect } from 'react';
-import { useFrame, useLoader, useThree } from '@react-three/fiber';
-import { Float, Text, RoundedBox, Billboard } from '@react-three/drei';
+import React, { useRef, useMemo, Suspense, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { Float, Text, Billboard, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Character } from '@yierbubu/shared';
 
@@ -15,200 +15,381 @@ interface Character3DProps {
   isDreaming?: boolean;
 }
 
-/* 角色主色调映射 */
-const characterColors: Record<string, { side: string; back: string; base: string; accent: string; glow: string }> = {
-  yier: { side: '#e8e0d4', back: '#d8d0c4', base: '#2a2a2a', accent: '#ffb3c6', glow: '#ffd4e0' },
-  bubu: { side: '#b89060', back: '#a07848', base: '#8b6340', accent: '#ffd93d', glow: '#ffe8a0' },
-  duoduo: { side: '#c8e0f5', back: '#b0d0ee', base: '#4a90d9', accent: '#ffd700', glow: '#b8e0ff' },
-  tangtang: { side: '#ffc0d4', back: '#ffa8c4', base: '#ff8fab', accent: '#ffffff', glow: '#ffd4e0' },
-  asong: { side: '#7cb342', back: '#689f38', base: '#5d4e37', accent: '#8d6e63', glow: '#c8e6c9' },
-  yueyue: { side: '#9575cd', back: '#7e57c2', base: '#6b4c9a', accent: '#ffd700', glow: '#d1c4e9' },
-  xiaoban: { side: '#ffa726', back: '#ff9800', base: '#e67e22', accent: '#87ceeb', glow: '#ffe0b2' },
-  mimi: { side: '#f48fb1', back: '#f06292', base: '#ff6b9d', accent: '#ffd700', glow: '#f8bbd0' },
-  qiaoqiao: { side: '#e0e8f8', back: '#c8d4f0', base: '#8b9dc3', accent: '#b3e5fc', glow: '#e3f2fd' },
-  tuantuan: { side: '#ffd8d8', back: '#ffc8c8', base: '#ffb3c6', accent: '#81c784', glow: '#ffcdd2' },
-  huahua: { side: '#ba68c8', back: '#ab47bc', base: '#9c27b0', accent: '#ff7043', glow: '#e1bee7' },
-  kaka: { side: '#90a4ae', back: '#78909c', base: '#607d8b', accent: '#e53935', glow: '#cfd8dc' },
-};
-
-function getColors(id?: string) {
-  return characterColors[id || 'bubu'] || characterColors.bubu;
+/* ============================================================
+   精致材质 — 毛绒sheen + 次表面散射 + 清漆
+   ============================================================ */
+function FurMaterial({ color, sheen = 0.7 }: { color: string; sheen?: number }) {
+  return (
+    <meshPhysicalMaterial
+      color={color}
+      roughness={0.65}
+      clearcoat={0.12}
+      clearcoatRoughness={0.55}
+      sheen={sheen}
+      sheenColor={new THREE.Color(color).offsetHSL(0, 0.08, 0.18)}
+      sheenRoughness={0.8}
+    />
+  );
 }
 
-/* 智能去背景 — 更精确的边缘处理 */
-function useTransparentTexture(url: string) {
-  const [texture, setTexture] = useState<THREE.Texture | null>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    setLoaded(false);
-    const loader = new THREE.TextureLoader();
-    loader.load(url, (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = 8;
-
-      const canvas = document.createElement('canvas');
-      canvas.width = tex.image.width;
-      canvas.height = tex.image.height;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(tex.image, 0, 0);
-
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-      const w = canvas.width, h = canvas.height;
-
-      // 先找背景色（四角采样）
-      const corners = [
-        [0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1],
-        [w / 2, 0], [w / 2, h - 1]
-      ];
-      let bgR = 0, bgG = 0, bgB = 0;
-      corners.forEach(([x, y]) => {
-        const idx = (Math.floor(y) * w + Math.floor(x)) * 4;
-        bgR += data[idx]; bgG += data[idx + 1]; bgB += data[idx + 2];
-      });
-      bgR /= corners.length; bgG /= corners.length; bgB /= corners.length;
-
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const i = (y * w + x) * 4;
-          const r = data[i], g = data[i + 1], b = data[i + 2];
-          const dist = Math.sqrt((r - bgR) ** 2 + (g - bgG) ** 2 + (b - bgB) ** 2);
-          // 只处理边缘区域（距边缘60px内），避免误删角色白色部分
-          const edgeDist = Math.min(x, y, w - 1 - x, h - 1 - y);
-          if (edgeDist < 60) {
-            if (dist < 20) {
-              data[i + 3] = 0;
-            } else if (dist < 45) {
-              data[i + 3] = Math.floor((dist - 20) / 25 * 255);
-            }
-          }
-        }
-      }
-      ctx.putImageData(imageData, 0, 0);
-
-      const newTex = new THREE.CanvasTexture(canvas);
-      newTex.colorSpace = THREE.SRGBColorSpace;
-      newTex.anisotropy = 8;
-      setTexture(newTex);
-      setLoaded(true);
-    });
-  }, [url]);
-
-  return { texture, loaded };
+function SkinMaterial({ color }: { color: string }) {
+  return (
+    <meshPhysicalMaterial
+      color={color}
+      roughness={0.45}
+      clearcoat={0.25}
+      clearcoatRoughness={0.4}
+      sheen={0.35}
+      sheenColor={new THREE.Color(color).offsetHSL(0, 0.1, 0.15)}
+    />
+  );
 }
 
-/* 出场动画 */
-function useEntranceAnimation(delay = 0) {
-  const ref = useRef<THREE.Group>(null);
-  const [done, setDone] = useState(false);
-
-  useFrame((state) => {
-    if (!ref.current || done) return;
-    const t = state.clock.elapsedTime - delay;
-    if (t < 0) {
-      ref.current.scale.setScalar(0.01);
-      ref.current.position.y = -0.8;
-    } else {
-      const progress = Math.min(1, t * 2.5);
-      const ease = 1 - Math.pow(1 - progress, 3);
-      ref.current.scale.setScalar(0.01 + ease * 0.99);
-      ref.current.position.y = -0.8 + ease * 0.8;
-      if (progress >= 1) setDone(true);
-    }
-  });
-
-  return ref;
+/* ============================================================
+   精致眼睛 — 眼白+虹膜+瞳孔+双层高光+眼底反光
+   ============================================================ */
+function CuteEye({ position, size = 0.07, blink = 0 }: { position: [number, number, number]; size?: number; blink?: number }) {
+  const scaleY = 1 - blink * 0.9;
+  return (
+    <group position={position} scale={[1, scaleY, 1]}>
+      {/* 眼白 */}
+      <mesh position={[0, 0, 0.002]}>
+        <sphereGeometry args={[size, 32, 32]} />
+        <meshPhysicalMaterial color="#ffffff" roughness={0.12} clearcoat={0.9} clearcoatRoughness={0.08} />
+      </mesh>
+      {/* 虹膜 */}
+      <mesh position={[0, -size * 0.08, size * 0.55]}>
+        <sphereGeometry args={[size * 0.58, 24, 24]} />
+        <meshPhysicalMaterial color="#2d1810" roughness={0.1} clearcoat={0.95} clearcoatRoughness={0.05} />
+      </mesh>
+      {/* 瞳孔 */}
+      <mesh position={[0, -size * 0.08, size * 0.85]}>
+        <sphereGeometry args={[size * 0.32, 16, 16]} />
+        <meshStandardMaterial color="#0a0503" roughness={0.06} />
+      </mesh>
+      {/* 主高光 */}
+      <mesh position={[-size * 0.18, size * 0.25, size * 1.05]}>
+        <sphereGeometry args={[size * 0.2, 12, 12]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+      {/* 次高光 */}
+      <mesh position={[size * 0.22, -size * 0.2, size * 0.98]}>
+        <sphereGeometry args={[size * 0.1, 8, 8]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.7} />
+      </mesh>
+      {/* 眼底反光 */}
+      <mesh position={[0, -size * 0.38, size * 0.85]}>
+        <sphereGeometry args={[size * 0.08, 8, 8]} />
+        <meshBasicMaterial color="#ffb3c6" transparent opacity={0.5} />
+      </mesh>
+    </group>
+  );
 }
 
-/* 立体角色主体 */
-function StereoCharacter({ characterId }: { characterId?: string }) {
-  const colors = getColors(characterId);
-  const { texture, loaded } = useTransparentTexture(`/characters_3d/${characterId}_3d.png`);
-  const isGhost = characterId === 'qiaoqiao';
+/* 腮红 — canvas径向渐变 */
+function Blush({ position, color = '#ff9eb5', size = 0.075 }: { position: [number, number, number]; color?: string; size?: number }) {
+  const texture = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 128;
+    const ctx = c.getContext('2d')!;
+    const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    g.addColorStop(0, color + 'dd');
+    g.addColorStop(0.4, color + '88');
+    g.addColorStop(0.75, color + '33');
+    g.addColorStop(1, color + '00');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(c);
+  }, [color]);
+  return (
+    <mesh position={position}>
+      <circleGeometry args={[size, 32]} />
+      <meshBasicMaterial map={texture} transparent depthWrite={false} />
+    </mesh>
+  );
+}
 
-  if (!texture || !loaded) {
-    return (
-      <group>
-        <mesh>
-          <boxGeometry args={[0.85, 1.15, 0.1]} />
-          <meshStandardMaterial color="#e0e0e0" />
-        </mesh>
-        <mesh position={[0, -0.65, 0]}>
-          <cylinderGeometry args={[0.3, 0.35, 0.06, 24]} />
-          <meshStandardMaterial color="#ccc" />
-        </mesh>
-      </group>
-    );
-  }
-
+/* ============================================================
+   一二 — 真正的3D人形模型（基于原型精确比例）
+   二头身：大头小身体，黑圆耳朵，黑蝴蝶领结，粉腮红，吐舌
+   ============================================================ */
+function YierModel({ blink }: { blink: number }) {
   return (
     <group>
-      {/* 发光底座光晕 */}
-      <mesh position={[0, -0.72, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.35, 0.5, 48]} />
-        <meshBasicMaterial color={colors.glow} transparent opacity={0.4} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* 主体 — 有厚度的圆角盒子 */}
-      <RoundedBox args={[0.9, 1.25, 0.18]} radius={0.06} smoothness={6} castShadow receiveShadow>
-        <meshPhysicalMaterial
-          map={texture}
-          roughness={0.38}
-          clearcoat={0.4}
-          clearcoatRoughness={0.28}
-          transparent={isGhost}
-          opacity={isGhost ? 0.88 : 1}
-          alphaTest={0.05}
-        />
-      </RoundedBox>
-
-      {/* 侧面渐变装饰 */}
-      <mesh position={[0, 0, -0.07]}>
-        <boxGeometry args={[0.9, 1.25, 0.015]} />
-        <meshPhysicalMaterial color={colors.back} roughness={0.5} clearcoat={0.2} />
-      </mesh>
-      {/* 背面装饰图案 */}
-      <mesh position={[0, 0, -0.08]}>
-        <ringGeometry args={[0.25, 0.3, 32]} />
-        <meshBasicMaterial color={colors.accent} transparent opacity={0.3} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* 精致底座 */}
-      <group position={[0, -0.72, 0]}>
+      {/* 身体 — 小而圆（二头身，身体更小） */}
+      <group position={[0, 0.3, 0]}>
         <mesh castShadow>
-          <cylinderGeometry args={[0.35, 0.4, 0.07, 32]} />
-          <meshPhysicalMaterial color={colors.base} roughness={0.28} clearcoat={0.65} clearcoatRoughness={0.18} />
+          <sphereGeometry args={[0.2, 48, 48]} />
+          <FurMaterial color="#f8f4ee" />
         </mesh>
-        <mesh position={[0, 0.04, 0]}>
-          <cylinderGeometry args={[0.33, 0.35, 0.02, 32]} />
-          <meshPhysicalMaterial color={colors.accent} roughness={0.18} clearcoat={0.85} metalness={0.15} />
+        {/* 肚皮 */}
+        <mesh position={[0, -0.02, 0.15]}>
+          <sphereGeometry args={[0.13, 32, 32]} />
+          <SkinMaterial color="#fffaf5" />
+        </mesh>
+      </group>
+
+      {/* 左手 — 更小 */}
+      <mesh position={[-0.24, 0.34, 0.07]} castShadow>
+        <sphereGeometry args={[0.08, 24, 24]} />
+        <FurMaterial color="#f8f4ee" />
+      </mesh>
+      {/* 右手 */}
+      <mesh position={[0.24, 0.34, 0.07]} castShadow>
+        <sphereGeometry args={[0.08, 24, 24]} />
+        <FurMaterial color="#f8f4ee" />
+      </mesh>
+
+      {/* 左脚 */}
+      <mesh position={[-0.11, 0.07, 0.08]} castShadow>
+        <sphereGeometry args={[0.095, 24, 24]} />
+        <meshPhysicalMaterial color="#2a2a2a" roughness={0.4} clearcoat={0.3} />
+      </mesh>
+      {/* 右脚 */}
+      <mesh position={[0.11, 0.07, 0.08]} castShadow>
+        <sphereGeometry args={[0.095, 24, 24]} />
+        <meshPhysicalMaterial color="#2a2a2a" roughness={0.4} clearcoat={0.3} />
+      </mesh>
+
+      {/* 小尾巴 */}
+      <mesh position={[0, 0.28, -0.2]} castShadow>
+        <sphereGeometry args={[0.06, 20, 20]} />
+        <FurMaterial color="#f8f4ee" />
+      </mesh>
+
+      {/* 头部 — 非常大的圆（二头身，头占2/3） */}
+      <group position={[0, 0.78, 0]}>
+        <mesh castShadow>
+          <sphereGeometry args={[0.4, 64, 64]} />
+          <FurMaterial color="#f8f4ee" sheen={0.75} />
+        </mesh>
+
+        {/* 左耳 — 黑色实心圆，更靠近头顶 */}
+        <mesh position={[-0.26, 0.32, -0.03]} castShadow>
+          <sphereGeometry args={[0.115, 32, 32]} />
+          <meshPhysicalMaterial color="#1f1f1f" roughness={0.5} clearcoat={0.2} sheen={0.4} />
+        </mesh>
+        {/* 右耳 */}
+        <mesh position={[0.26, 0.32, -0.03]} castShadow>
+          <sphereGeometry args={[0.115, 32, 32]} />
+          <meshPhysicalMaterial color="#1f1f1f" roughness={0.5} clearcoat={0.2} sheen={0.4} />
+        </mesh>
+
+        {/* 眼睛 — 更小，间距更大 */}
+        <CuteEye position={[-0.14, 0.07, 0.35]} size={0.06} blink={blink} />
+        <CuteEye position={[0.14, 0.07, 0.35]} size={0.06} blink={blink} />
+
+        {/* 腮红 — 更大 */}
+        <Blush position={[-0.23, -0.05, 0.32]} color="#ff9eb5" size={0.08} />
+        <Blush position={[0.23, -0.05, 0.32]} color="#ff9eb5" size={0.08} />
+
+        {/* 鼻子 */}
+        <mesh position={[0, -0.01, 0.38]}>
+          <sphereGeometry args={[0.022, 16, 16]} />
+          <meshStandardMaterial color="#1f1f1f" roughness={0.25} />
+        </mesh>
+
+        {/* 嘴巴 — 吐舌 */}
+        <group position={[0, -0.11, 0.36]}>
+          <mesh>
+            <torusGeometry args={[0.042, 0.014, 12, 24, Math.PI]} />
+            <meshStandardMaterial color="#3d1f10" roughness={0.35} />
+          </mesh>
+          <mesh position={[0, -0.02, 0.012]}>
+            <sphereGeometry args={[0.024, 16, 16]} />
+            <meshPhysicalMaterial color="#ff8fa3" roughness={0.35} clearcoat={0.4} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* 头身衔接 — 脖子 */}
+      <mesh position={[0, 0.52, 0]}>
+        <sphereGeometry args={[0.14, 24, 24]} />
+        <FurMaterial color="#f8f4ee" />
+      </mesh>
+
+      {/* 黑色蝴蝶领结 — 更高位置，靠近头底部 */}
+      <group position={[0, 0.54, 0.18]}>
+        <mesh position={[-0.075, 0, 0]} rotation={[0, 0, 0.45]} castShadow>
+          <sphereGeometry args={[0.065, 24, 24]} />
+          <meshPhysicalMaterial color="#1a1a1a" roughness={0.28} clearcoat={0.65} clearcoatRoughness={0.2} />
+        </mesh>
+        <mesh position={[0.075, 0, 0]} rotation={[0, 0, -0.45]} castShadow>
+          <sphereGeometry args={[0.065, 24, 24]} />
+          <meshPhysicalMaterial color="#1a1a1a" roughness={0.28} clearcoat={0.65} clearcoatRoughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0, 0.02]}>
+          <sphereGeometry args={[0.032, 16, 16]} />
+          <meshPhysicalMaterial color="#1a1a1a" roughness={0.25} clearcoat={0.7} />
         </mesh>
       </group>
     </group>
   );
 }
 
-/* 加载中的角色 */
-function LoadingCharacter() {
-  const ref = useRef<THREE.Mesh>(null);
-  useFrame((state) => {
-    if (ref.current) ref.current.rotation.y = state.clock.elapsedTime * 2.5;
-  });
+/* ============================================================
+   布布 — 真正的3D人形模型
+   棕色小熊，棕耳朵，黄腮红，温和微笑
+   ============================================================ */
+function BubuModel({ blink }: { blink: number }) {
   return (
     <group>
-      <mesh ref={ref}>
-        <torusGeometry args={[0.28, 0.035, 8, 24]} />
-        <meshBasicMaterial color="#ffb3c6" />
+      {/* 身体 */}
+      <group position={[0, 0.3, 0]}>
+        <mesh castShadow>
+          <sphereGeometry args={[0.21, 48, 48]} />
+          <FurMaterial color="#b8895a" />
+        </mesh>
+        {/* 肚皮 */}
+        <mesh position={[0, -0.02, 0.15]}>
+          <sphereGeometry args={[0.14, 32, 32]} />
+          <SkinMaterial color="#d4a574" />
+        </mesh>
+      </group>
+
+      {/* 左手 */}
+      <mesh position={[-0.25, 0.34, 0.07]} castShadow>
+        <sphereGeometry args={[0.082, 24, 24]} />
+        <FurMaterial color="#b8895a" />
       </mesh>
-      <mesh position={[0, -0.5, 0]}>
-        <cylinderGeometry args={[0.28, 0.32, 0.05, 24]} />
-        <meshStandardMaterial color="#ddd" />
+      {/* 右手 */}
+      <mesh position={[0.25, 0.34, 0.07]} castShadow>
+        <sphereGeometry args={[0.082, 24, 24]} />
+        <FurMaterial color="#b8895a" />
+      </mesh>
+
+      {/* 左脚 */}
+      <mesh position={[-0.11, 0.07, 0.08]} castShadow>
+        <sphereGeometry args={[0.098, 24, 24]} />
+        <FurMaterial color="#9a7040" />
+      </mesh>
+      {/* 右脚 */}
+      <mesh position={[0.11, 0.07, 0.08]} castShadow>
+        <sphereGeometry args={[0.098, 24, 24]} />
+        <FurMaterial color="#9a7040" />
+      </mesh>
+
+      {/* 小尾巴 */}
+      <mesh position={[0, 0.28, -0.21]} castShadow>
+        <sphereGeometry args={[0.065, 20, 20]} />
+        <FurMaterial color="#b8895a" />
+      </mesh>
+
+      {/* 头部 */}
+      <group position={[0, 0.78, 0]}>
+        <mesh castShadow>
+          <sphereGeometry args={[0.4, 64, 64]} />
+          <FurMaterial color="#b8895a" sheen={0.75} />
+        </mesh>
+
+        {/* 左耳 — 棕色圆耳，内耳浅色 */}
+        <group position={[-0.27, 0.28, -0.02]}>
+          <mesh castShadow>
+            <sphereGeometry args={[0.125, 32, 32]} />
+            <FurMaterial color="#9a7040" />
+          </mesh>
+          <mesh position={[0, -0.02, 0.05]}>
+            <sphereGeometry args={[0.07, 20, 20]} />
+            <SkinMaterial color="#d4a574" />
+          </mesh>
+        </group>
+        {/* 右耳 */}
+        <group position={[0.27, 0.28, -0.02]}>
+          <mesh castShadow>
+            <sphereGeometry args={[0.125, 32, 32]} />
+            <FurMaterial color="#9a7040" />
+          </mesh>
+          <mesh position={[0, -0.02, 0.05]}>
+            <sphereGeometry args={[0.07, 20, 20]} />
+            <SkinMaterial color="#d4a574" />
+          </mesh>
+        </group>
+
+        {/* 眼睛 */}
+        <CuteEye position={[-0.14, 0.07, 0.35]} size={0.06} blink={blink} />
+        <CuteEye position={[0.14, 0.07, 0.35]} size={0.06} blink={blink} />
+
+        {/* 黄色腮红 — 更大 */}
+        <Blush position={[-0.23, -0.05, 0.32]} color="#ffd54f" size={0.085} />
+        <Blush position={[0.23, -0.05, 0.32]} color="#ffd54f" size={0.085} />
+
+        {/* 嘴周浅色 — 更合适的大小 */}
+        <mesh position={[0, -0.09, 0.32]}>
+          <sphereGeometry args={[0.09, 28, 28]} />
+          <SkinMaterial color="#d4a574" />
+        </mesh>
+
+        {/* 鼻子 */}
+        <mesh position={[0, -0.02, 0.38]}>
+          <sphereGeometry args={[0.024, 16, 16]} />
+          <meshStandardMaterial color="#4a3020" roughness={0.25} />
+        </mesh>
+
+        {/* 微笑嘴 */}
+        <mesh position={[0, -0.12, 0.36]}>
+          <torusGeometry args={[0.044, 0.014, 12, 24, Math.PI]} />
+          <meshStandardMaterial color="#3d1f10" roughness={0.35} />
+        </mesh>
+      </group>
+
+      {/* 头身衔接 — 脖子 */}
+      <mesh position={[0, 0.52, 0]}>
+        <sphereGeometry args={[0.14, 24, 24]} />
+        <FurMaterial color="#b8895a" />
       </mesh>
     </group>
   );
 }
 
+/* ============================================================
+   通用配角3D模型 — 用AI生成的3D渲染图作为正面，有厚度的立体牌
+   （配角用立体牌，主角用真正3D人形）
+   ============================================================ */
+function SupportCharacter({ characterId }: { characterId: string }) {
+  const texture = useMemo(() => {
+    const loader = new THREE.TextureLoader();
+    const tex = loader.load(`/characters_3d/${characterId}_3d.png`);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+  }, [characterId]);
+
+  const colors: Record<string, string> = {
+    duoduo: '#b8d8f0', tangtang: '#ffc8d8', asong: '#8bc34a',
+    yueyue: '#9575cd', xiaoban: '#ffb74d', mimi: '#f48fb1',
+    qiaoqiao: '#e0e8f8', tuantuan: '#ffd8d8', huahua: '#ba68c8', kaka: '#90a4ae',
+  };
+
+  return (
+    <group>
+      <RoundedBox args={[0.85, 1.2, 0.16]} radius={0.05} smoothness={6} castShadow receiveShadow>
+        <meshPhysicalMaterial map={texture} roughness={0.4} clearcoat={0.35} alphaTest={0.05} />
+        <meshPhysicalMaterial color={colors[characterId] || '#ccc'} roughness={0.5} />
+        <meshPhysicalMaterial color={colors[characterId] || '#ccc'} roughness={0.5} />
+        <meshPhysicalMaterial color={colors[characterId] || '#ddd'} roughness={0.45} />
+        <meshPhysicalMaterial color="#aaa" roughness={0.55} />
+        <meshPhysicalMaterial color={colors[characterId] || '#bbb'} roughness={0.5} />
+      </RoundedBox>
+      {/* 底座 */}
+      <mesh position={[0, -0.7, 0]} castShadow>
+        <cylinderGeometry args={[0.32, 0.36, 0.06, 32]} />
+        <meshPhysicalMaterial color={colors[characterId] || '#888'} roughness={0.3} clearcoat={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+/* 角色模型路由 */
+function CharacterModel({ characterId, blink }: { characterId?: string; blink: number }) {
+  if (characterId === 'yier') return <YierModel blink={blink} />;
+  if (characterId === 'bubu') return <BubuModel blink={blink} />;
+  if (characterId) return <SupportCharacter characterId={characterId} />;
+  return <BubuModel blink={blink} />;
+}
+
+/* ============================================================
+   主组件
+   ============================================================ */
 export function Character3D({
   character,
   position,
@@ -220,23 +401,32 @@ export function Character3D({
   isDreaming = false,
 }: Character3DProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const entranceRef = useEntranceAnimation();
   const [hovered, setHovered] = useState(false);
   const [pressed, setPressed] = useState(false);
-  const colors = getColors(character?.id);
+  const [blink, setBlink] = useState(0);
+
+  // 眨眼动画
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    const blinkCycle = (t + position[0]) % 4;
+    if (blinkCycle > 3.85 && blinkCycle < 4) {
+      setBlink(Math.min(1, (blinkCycle - 3.85) / 0.075));
+    } else {
+      setBlink(0);
+    }
+  });
 
   useFrame((state) => {
     if (!groupRef.current) return;
     const t = state.clock.elapsedTime;
-    // 呼吸动画
-    const breathe = 1 + Math.sin(t * 1.8 + position[0] * 1.5) * 0.012;
+    // 呼吸动画 — 更微妙
+    const breathe = 1 + Math.sin(t * 1.5 + position[0] * 1.5) * 0.006;
     const pressScale = pressed ? 0.95 : 1;
     groupRef.current.scale.setScalar(breathe * pressScale);
-    // 漂浮
-    groupRef.current.position.y = position[1] + Math.sin(t * 1.3 + position[0] * 2) * 0.02;
-    // 活跃摇摆
+    // 漂浮 — 更微妙，基础位置让脚接触桌面
+    groupRef.current.position.y = position[1] - 0.06 + Math.sin(t * 1.1 + position[0] * 2) * 0.008;
     if (isActive) {
-      groupRef.current.rotation.z = Math.sin(t * 2.2) * 0.018;
+      groupRef.current.rotation.z = Math.sin(t * 2) * 0.012;
     }
   });
 
@@ -251,32 +441,28 @@ export function Character3D({
       onPointerUp={() => setPressed(false)}
       onPointerLeave={() => setPressed(false)}
     >
-      <group ref={entranceRef}>
-        <Suspense fallback={<LoadingCharacter />}>
-          <Float speed={0.9} rotationIntensity={0.035} floatIntensity={0.09}>
-            <StereoCharacter characterId={character?.id} />
+      <Suspense fallback={null}>
+        <group scale={0.82}>
+          <Float speed={0.6} rotationIntensity={0.015} floatIntensity={0.03}>
+            <CharacterModel characterId={character?.id} blink={blink} />
           </Float>
-        </Suspense>
-      </group>
+        </group>
+      </Suspense>
 
-      {/* 名字牌 — Billboard始终面向相机 */}
+      {/* 名字牌 */}
       {playerName && (
-        <Billboard position={[0, 1.12, 0]}>
+        <Billboard position={[0, 1.22, 0]}>
           <mesh>
-            <planeGeometry args={[0.95, 0.19]} />
-            <meshBasicMaterial color="#ffffff" transparent opacity={0.96} />
-          </mesh>
-          <mesh position={[0, 0, 0.003]}>
-            <planeGeometry args={[0.91, 0.15]} />
-            <meshBasicMaterial color={isActive ? '#e3f2fd' : hovered ? '#fff3e0' : '#fafafa'} transparent opacity={0.92} />
+            <planeGeometry args={[0.85, 0.17]} />
+            <meshBasicMaterial color="#ffffff" transparent opacity={0.95} />
           </mesh>
           <Text
-            position={[0, 0, 0.008]}
-            fontSize={0.08}
+            position={[0, 0, 0.005]}
+            fontSize={0.072}
             color={isActive ? '#1565c0' : '#5d4037'}
             anchorX="center"
             anchorY="middle"
-            maxWidth={0.85}
+            maxWidth={0.78}
             fontWeight="bold"
           >
             {playerName}
@@ -284,47 +470,39 @@ export function Character3D({
         </Billboard>
       )}
 
-      {/* 活力心心 — Billboard */}
-      <Billboard position={[-0.18, 1.32, 0]}>
+      {/* 活力心心 */}
+      <Billboard position={[-0.14, 1.38, 0]}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <mesh key={i} position={[i * 0.1, 0, 0]}>
-            <sphereGeometry args={[0.035, 10, 10]} />
+          <mesh key={i} position={[i * 0.085, 0, 0]}>
+            <sphereGeometry args={[0.03, 10, 10]} />
             <meshBasicMaterial color={i < vitality ? '#ff5252' : '#e0e0e0'} />
           </mesh>
         ))}
       </Billboard>
 
-      {/* 友情值 — Billboard */}
+      {/* 友情值 */}
       {friendship > 0 && (
-        <Billboard position={[0.2, 1.32, 0]}>
+        <Billboard position={[0.17, 1.38, 0]}>
           {Array.from({ length: Math.min(friendship, 6) }).map((_, i) => (
-            <mesh key={i} position={[i * 0.08, 0, 0]}>
-              <sphereGeometry args={[0.028, 8, 8]} />
+            <mesh key={i} position={[i * 0.07, 0, 0]}>
+              <sphereGeometry args={[0.024, 8, 8]} />
               <meshBasicMaterial color="#ff80ab" />
             </mesh>
           ))}
         </Billboard>
       )}
 
-      {/* 活跃光环 */}
+      {/* 活跃光环 — 在脚下 */}
       {isActive && (
-        <mesh position={[0, -0.7, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.42, 0.52, 48]} />
-          <meshBasicMaterial color="#2196f3" transparent opacity={0.75} side={THREE.DoubleSide} />
-        </mesh>
-      )}
-
-      {/* 悬停光环 */}
-      {hovered && !isActive && (
-        <mesh position={[0, -0.7, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.45, 0.53, 48]} />
-          <meshBasicMaterial color={colors.accent} transparent opacity={0.55} side={THREE.DoubleSide} />
+        <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.35, 0.45, 48]} />
+          <meshBasicMaterial color="#2196f3" transparent opacity={0.7} side={THREE.DoubleSide} />
         </mesh>
       )}
 
       {/* 梦境状态 */}
       {isDreaming && (
-        <Billboard position={[0.3, 1.45, 0]}>
+        <Billboard position={[0.3, 1.5, 0]}>
           <Text fontSize={0.1} color="#9575cd" anchorX="center" fontWeight="bold">💤</Text>
         </Billboard>
       )}
