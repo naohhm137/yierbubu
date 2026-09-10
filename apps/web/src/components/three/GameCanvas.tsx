@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows, Float, Text } from '@react-three/drei';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { ContactShadows, Float, Text, OrbitControls } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, SMAA } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import type { PublicRoomView, PrivatePlayerView, Card, Character } from '@yierbubu/shared';
@@ -19,22 +19,6 @@ interface GameCanvasProps {
   onPlayCard: (cardId: string, targetId?: string) => void;
   onUseSkill: () => void;
   onEndTurn: () => void;
-}
-
-/** 鼠标视角微动 — 模拟第一人称头部轻微晃动 */
-function MouseLook() {
-  const { camera, gl } = useThree();
-  const target = useRef(new THREE.Vector3(0, 1.1, 0));
-  const basePos = useRef(new THREE.Vector3(0, 2.0, 4.8));
-
-  useFrame((state) => {
-    const x = state.pointer.x * 0.35;
-    const y = state.pointer.y * 0.2;
-    camera.position.x = basePos.current.x + x;
-    camera.position.y = basePos.current.y + y;
-    camera.lookAt(target.current);
-  });
-  return null;
 }
 
 /** 玩家座位位置计算 — 围坐圆桌，全部面向桌子中心 */
@@ -119,7 +103,16 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
       style={{ background: 'linear-gradient(180deg, #fef3e2 0%, #fce4d6 50%, #f8d5c0 100%)' }}
       dpr={[1, device.dpr]}
     >
-      <MouseLook />
+      <OrbitControls
+        enablePan={false}
+        minDistance={3}
+        maxDistance={10}
+        minPolarAngle={0.3}
+        maxPolarAngle={Math.PI / 2 - 0.05}
+        target={[0, 0.5, 0]}
+        enableDamping
+        dampingFactor={0.08}
+      />
       <Suspense fallback={null}>
         {/* 灯光 — 柔和暖色调，避免过曝 */}
         <ambientLight intensity={0.4} color="#fff5e6" />

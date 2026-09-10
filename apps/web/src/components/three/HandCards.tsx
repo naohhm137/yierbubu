@@ -23,11 +23,11 @@ export function HandCards({ cards, onPlayCard, isMyTurn }: HandCardsProps) {
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0 : i / (count - 1) - 0.5;
       const x = t * spread;
-      const z = 2.2 + Math.abs(t) * 0.3; // 弧形排列
+      const z = 1.8 + Math.abs(t) * 0.3; // 弧形排列，更靠近相机
       const rotY = -t * 0.5; // 扇形旋转
-      const rotX = -0.15; // 略微后仰
+      const rotX = -0.25; // 略微后仰，更易阅读
       positions.push({
-        pos: [x, 0.88, z],
+        pos: [x, 1.15, z],
         rot: [rotX, rotY, 0],
       });
     }
@@ -50,7 +50,7 @@ export function HandCards({ cards, onPlayCard, isMyTurn }: HandCardsProps) {
   return (
     <group>
       {cards.slice(0, 8).map((card, i) => {
-        const { pos, rot } = cardPositions[i] || { pos: [0, 0.88, 2.2], rot: [-0.15, 0, 0] };
+        const { pos, rot } = cardPositions[i] || { pos: [0, 1.15, 1.8], rot: [-0.25, 0, 0] };
         return (
           <Card3D
             key={card.id + i}
@@ -69,7 +69,7 @@ export function HandCards({ cards, onPlayCard, isMyTurn }: HandCardsProps) {
 
       {/* 选中提示 */}
       {selectedIndex !== null && (
-        <mesh position={[0, 1.3, 2.5]}>
+        <mesh position={[0, 1.6, 2.1]}>
           <planeGeometry args={[1.5, 0.15]} />
           <meshBasicMaterial color="#ffd700" transparent opacity={0.9} />
         </mesh>

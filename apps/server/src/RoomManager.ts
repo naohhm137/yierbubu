@@ -1,6 +1,6 @@
 import type { RoomState, PlayerState, ClientEvent } from '@yierbubu/shared';
 import {
-  createGame, playerAction, botTakeTurn, getPublicView,
+  createGame, playerAction, botTakeTurn, getPublicView, CHARACTERS,
   type ActionType, type ActionParams,
 } from '@yierbubu/shared';
 import type { Server } from 'socket.io';
@@ -76,11 +76,23 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room || room.phase !== 'lobby') return null;
     const existingBots = room.players.filter((p) => p.isBot).length;
+
+    // 获取已被选择的角色ID
+    const getTakenChars = () => room.players.map((p) => p.characterId).filter(Boolean) as string[];
+
     for (let i = 0; i < count && room.players.length < 8; i++) {
       const botId = `bot_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`;
       const botName = BOT_NAMES[(existingBots + i) % BOT_NAMES.length] + (existingBots + i > 3 ? (existingBots + i) : '');
+
+      // 随机分配一个未被选择的角色
+      const taken = getTakenChars();
+      const available = CHARACTERS.filter((c) => !taken.includes(c.id));
+      const randomChar = available.length > 0
+        ? available[Math.floor(Math.random() * available.length)]
+        : CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+
       room.players.push({
-        id: botId, name: botName, isBot: true, characterId: null, identityId: null,
+        id: botId, name: botName, isBot: true, characterId: randomChar.id, identityId: null,
         vitality: 4, maxVitality: 4, friendship: 0, hand: [], handLimit: 6,
         status: 'active', bonds: [], shield: 0, usedSkillThisTurn: false,
         usedSkillThisGame: false, hasActedThisTurn: false, hasDrawnThisTurn: false,
