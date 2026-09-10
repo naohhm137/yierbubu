@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  yierbubu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yierbubu-mengjing
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # 开发模式（热更新）
+  yierbubu-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yierbubu-dev
+    ports:
+      - "5173:5173"
+      - "3001:3001"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npm run dev:server & npm run dev"
+    profiles:
+      - dev

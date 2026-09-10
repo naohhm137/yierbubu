@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: yierbubu-mengjing
+    runtime: docker
+    repo: https://github.com/your-username/yierbubu
+    plan: free
+    numInstances: 1
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
