@@ -44,7 +44,7 @@ export const CARDS: Card[] = [
     '将你身上的一个负面效果转移给一名玩家。', '把坏运气送给别人吧（但可能影响友情）。',
     [{ type: 'transferNegative', target: 'other' }]),
   c('I09', '友情测试', 'interact', 'coralPink',
-    '若与目标友情 ≥ 3，双方各 +1 友情；否则目标失去 1 活力。', '考验你们友情的时刻到了！',
+    '若与目标友情达到 3，双方各 +1 友情；否则目标失去 1 活力。', '考验你们友情的时刻到了！',
     [{ type: 'damage', value: 1, target: 'other' }, { type: 'gainFriendship', value: 1, target: 'other' }], 'variable'),
   c('I10', '打乱顺序', 'interact', 'tideCyan',
     '重新随机排列所有玩家的行动顺序。', '下一轮谁先行动？全看运气！',
