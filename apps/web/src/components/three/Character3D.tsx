@@ -503,11 +503,11 @@ function XiaobanCharacter() {
         </mesh>
         <mesh position={[-0.095, 0, 0.006]}>
           <circleGeometry args={[0.042, 18]} />
-          <meshPhysicalMaterial color="#87ceeb" roughness={0.05} transmission={0.6} thickness={0.1} />
+          <meshPhysicalMaterial color="#a8d8ff" roughness={0.08} clearcoat={0.9} transparent opacity={0.75} />
         </mesh>
         <mesh position={[0.095, 0, 0.006]}>
           <circleGeometry args={[0.042, 18]} />
-          <meshPhysicalMaterial color="#87ceeb" roughness={0.05} transmission={0.6} thickness={0.1} />
+          <meshPhysicalMaterial color="#a8d8ff" roughness={0.08} clearcoat={0.9} transparent opacity={0.75} />
         </mesh>
       </group>
 

@@ -2019,7 +2019,304 @@ html, body {
   .action-btn { padding: 8px 12px; font-size: 0.8rem; }
 }
 
-/* ---------- 减少动效偏好 ---------- */
+/* ============================================================
+   完整移动端适配 — 竖屏
+   ============================================================ */
+@media (max-width: 768px) and (orientation: portrait) {
+  /* 主菜单 */
+  .menu-screen-premium { padding: 16px 12px; }
+  .menu-hero { gap: 12px; margin-bottom: 12px; }
+  .menu-char-wrapper { width: 90px; height: 90px; }
+  .menu-char { width: 80px; height: 80px; }
+  .menu-title-premium { font-size: 2rem; line-height: 1.15; }
+  .title-line-1 { font-size: 2.2rem; }
+  .title-line-2 { font-size: 1.6rem; }
+  .menu-subtitle-premium { font-size: 0.8rem; margin: 6px 0 14px; }
+  .menu-form-premium { gap: 10px; width: 100%; max-width: 320px; }
+  .input-premium { font-size: 0.95rem; padding: 12px 14px 12px 38px; }
+  .menu-buttons-premium { flex-direction: column; gap: 10px; width: 100%; }
+  .btn-premium { width: 100%; padding: 14px 18px; font-size: 1rem; }
+  .menu-footer-links { flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .footer-link { font-size: 0.8rem; padding: 6px 10px; }
+  .menu-copyright { font-size: 0.65rem; }
+
+  /* 大厅 */
+  .lobby-screen-premium { padding: 12px 10px; }
+  .lobby-topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .lobby-back-btn, .lobby-rules-btn {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    flex: 1;
+    min-width: 70px;
+  }
+  .lobby-room-code {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    padding: 8px 12px;
+  }
+  .lobby-title { font-size: 1.5rem; }
+  .lobby-subtitle { font-size: 0.8rem; }
+  .my-character-card { padding: 10px 12px; }
+  .my-char-avatar { width: 50px; height: 50px; }
+  .my-char-name { font-size: 0.95rem; }
+  .my-char-skill { font-size: 0.7rem; }
+  .lobby-players-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .lobby-player-card-premium { padding: 10px 8px; min-height: 110px; }
+  .player-avatar { width: 44px; height: 44px; }
+  .player-name-premium { font-size: 0.75rem; }
+  .player-char-name { font-size: 0.65rem; }
+  .lobby-actions { flex-direction: column; gap: 8px; width: 100%; }
+  .lobby-actions .btn-premium { width: 100%; }
+
+  /* 游戏桌HUD */
+  .game-table-3d-container { height: 100dvh; }
+  .game-hud-top {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .hud-scene-card {
+    order: 1;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+  .hud-turn-info {
+    order: 2;
+    width: 100%;
+    text-align: center;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+  .hud-player-stats {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    gap: 6px;
+  }
+  .hud-stat-item { font-size: 0.7rem; padding: 3px 8px; }
+  .game-hud-bottom {
+    padding: 8px 10px 12px;
+    gap: 8px;
+  }
+  .hud-action-buttons {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+  .hud-action-btn {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    min-width: 60px;
+    flex: 1;
+    max-width: 120px;
+  }
+  .hud-log-panel {
+    max-height: 80px;
+    font-size: 0.65rem;
+    padding: 6px 8px;
+  }
+  .hud-help-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    bottom: 90px;
+  }
+
+  /* 角色选择 */
+  .char-select-modal { padding: 16px 12px; }
+  .char-select-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .char-select-card { padding: 10px 8px; }
+  .char-select-avatar { width: 56px; height: 56px; }
+  .char-select-name { font-size: 0.85rem; }
+  .char-select-skill { font-size: 0.65rem; }
+  .char-select-footer { flex-direction: column; }
+  .char-select-footer .btn-premium { width: 100%; }
+
+  /* 规则页面 */
+  .rules-screen { padding: 16px 14px; }
+  .rules-content { font-size: 0.85rem; }
+  .rules-section h2 { font-size: 1.2rem; }
+}
+
+/* ============================================================
+   完整移动端适配 — 横屏
+   ============================================================ */
+@media (max-width: 900px) and (orientation: landscape) {
+  .menu-screen-premium { padding: 10px 20px; }
+  .menu-hero { gap: 16px; margin-bottom: 8px; }
+  .menu-char-wrapper { width: 70px; height: 70px; }
+  .menu-char { width: 62px; height: 62px; }
+  .menu-title-premium { font-size: 1.5rem; }
+  .title-line-1 { font-size: 1.7rem; }
+  .title-line-2 { font-size: 1.2rem; }
+  .menu-subtitle-premium { font-size: 0.75rem; margin: 4px 0 10px; }
+  .menu-form-premium { gap: 8px; max-width: 380px; }
+  .input-premium { font-size: 0.85rem; padding: 10px 12px 10px 36px; }
+  .btn-premium { padding: 10px 16px; font-size: 0.85rem; }
+
+  .lobby-players-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .lobby-player-card-premium { padding: 8px 6px; min-height: 90px; }
+  .player-avatar { width: 36px; height: 36px; }
+
+  .game-hud-top { padding: 6px 12px; gap: 8px; }
+  .hud-scene-card { max-width: 140px; }
+  .hud-turn-info { font-size: 0.75rem; }
+  .hud-action-btn { padding: 6px 10px; font-size: 0.7rem; }
+}
+
+/* ============================================================
+   UI精致化提升 — 按钮、卡片、动效
+   ============================================================ */
+
+/* 按钮精致化 */
+.btn-premium {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-style: preserve-3d;
+}
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s ease;
+}
+.btn-premium:hover::before { left: 100%; }
+.btn-premium:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+.btn-premium:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* 卡片精致化 */
+.lobby-player-card-premium {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(10px);
+}
+.lobby-player-card-premium:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+}
+.lobby-player-card-premium.ready {
+  border-color: #6bcb77;
+  box-shadow: 0 0 20px rgba(107, 203, 119, 0.3);
+}
+
+/* 角色卡片精致化 */
+.char-select-card {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+.char-select-card:hover {
+  transform: translateY(-6px) scale(1.04);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.15);
+}
+.char-select-card.selected {
+  border-color: #ff8fab;
+  box-shadow: 0 0 25px rgba(255, 143, 171, 0.4);
+  transform: scale(1.05);
+}
+
+/* 输入框精致化 */
+.input-premium {
+  transition: all 0.25s ease;
+  backdrop-filter: blur(10px);
+}
+.input-premium:focus {
+  border-color: #ff8fab;
+  box-shadow: 0 0 0 3px rgba(255, 143, 171, 0.2), 0 4px 20px rgba(0,0,0,0.08);
+  outline: none;
+}
+
+/* 加载屏幕 */
+.game-loading-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #ffe4ec 0%, #ffd4e0 50%, #fce4d6 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  gap: 20px;
+}
+.loading-character {
+  width: 120px;
+  height: 120px;
+  animation: loadingBounce 1.2s ease-in-out infinite;
+}
+@keyframes loadingBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-15px) scale(1.05); }
+}
+.loading-text {
+  font-size: 1.1rem;
+  color: #8b6f8a;
+  font-weight: 600;
+  animation: loadingPulse 1.5s ease-in-out infinite;
+}
+@keyframes loadingPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.loading-dots::after {
+  content: '';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+@keyframes dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+
+/* HUD按钮精致化 */
+.hud-action-btn {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(8px);
+}
+.hud-action-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+.hud-action-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+.hud-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 房间号复制反馈 */
+.lobby-room-code {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.lobby-room-code:hover {
+  background: rgba(255,255,255,0.95);
+  transform: scale(1.02);
+}
+.lobby-room-code:active {
+  transform: scale(0.98);
+}
+
+/* 减少动效偏好 */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
