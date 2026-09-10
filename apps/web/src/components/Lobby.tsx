@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useGame } from '../GameContext.js';
 import { getCharacter, CHARACTERS } from '@yierbubu/shared';
+import { CharacterSelect } from './CharacterSelect.js';
 
 export function Lobby() {
-  const { room, roomId, playerId, leaveRoom, setReady, fillBots, removeBot, startGame, setScreen } = useGame();
+  const { room, roomId, playerId, leaveRoom, setReady, fillBots, removeBot, startGame, setScreen, selectCharacter } = useGame();
   const [showCharSelect, setShowCharSelect] = useState(false);
   if (!room) return null;
 
@@ -11,13 +12,23 @@ export function Lobby() {
   const me = room.players.find((p) => p.id === playerId);
   const canStart = isHost && room.players.length >= 4;
 
+  // 已被选择的角色ID
+  const takenIds = room.players
+    .filter((p) => p.characterId && p.id !== playerId)
+    .map((p) => p.characterId) as string[];
+
+  const myChar = me?.characterId ? getCharacter(me.characterId) : null;
+
+  const handleSelectChar = (charId: string) => {
+    selectCharacter(charId);
+  };
+
   const copyRoomCode = () => {
     navigator.clipboard.writeText(roomId || '');
   };
 
   return (
     <div className="lobby-screen-premium">
-      {/* 背景 */}
       <div className="lobby-bg" />
 
       <div className="lobby-content">
@@ -42,6 +53,31 @@ export function Lobby() {
           <p className="lobby-subtitle">{room.players.length}/8 名玩家已加入</p>
         </div>
 
+        {/* 我的角色选择区 */}
+        <div className="my-character-section">
+          <div className="my-character-label">我的角色</div>
+          <div
+            className={`my-character-card ${myChar ? 'selected' : 'empty'}`}
+            onClick={() => setShowCharSelect(true)}
+          >
+            {myChar ? (
+              <>
+                <img src={myChar.avatar} alt={myChar.name} className="my-char-avatar" />
+                <div className="my-char-info">
+                  <div className="my-char-name">{myChar.name}</div>
+                  <div className="my-char-skill">✨ {myChar.skill?.name}</div>
+                </div>
+                <div className="my-char-change">更换</div>
+              </>
+            ) : (
+              <>
+                <div className="my-char-empty-icon">🎭</div>
+                <div className="my-char-empty-text">点击选择角色</div>
+              </>
+            )}
+          </div>
+        </div>
+
         {/* 玩家网格 */}
         <div className="lobby-players-grid">
           {room.players.map((p) => {
@@ -52,10 +88,8 @@ export function Lobby() {
                 key={p.id}
                 className={`lobby-player-card-premium ${p.ready ? 'ready' : ''} ${isMe ? 'is-me' : ''} ${p.id === room.hostId ? 'is-host' : ''}`}
               >
-                {/* 房主标记 */}
                 {p.id === room.hostId && <div className="player-host-badge">👑</div>}
 
-                {/* 头像 */}
                 <div className="player-avatar-container">
                   {char ? (
                     <img src={char.avatar} alt={char.name} className="player-avatar" />
@@ -67,7 +101,6 @@ export function Lobby() {
                   {p.ready && <div className="player-ready-check">✓</div>}
                 </div>
 
-                {/* 信息 */}
                 <div className="player-info">
                   <div className="player-name">
                     {p.name}{p.isBot && ' 🤖'}
@@ -81,7 +114,6 @@ export function Lobby() {
                   </div>
                 </div>
 
-                {/* 移除机器人 */}
                 {p.isBot && isHost && (
                   <button className="player-remove-btn" onClick={() => removeBot(p.id)}>
                     ✕
@@ -143,6 +175,16 @@ export function Lobby() {
           </p>
         )}
       </div>
+
+      {/* 角色选择弹窗 */}
+      {showCharSelect && (
+        <CharacterSelect
+          selectedId={me?.characterId || undefined}
+          takenIds={takenIds}
+          onSelect={handleSelectChar}
+          onClose={() => setShowCharSelect(false)}
+        />
+      )}
     </div>
   );
 }

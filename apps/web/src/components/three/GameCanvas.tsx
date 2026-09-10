@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Environment, ContactShadows, Float, Text } from '@react-three/drei';
+import { ContactShadows, Float, Text } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, SMAA } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import type { PublicRoomView, PrivatePlayerView, Card, Character } from '@yierbubu/shared';
@@ -10,6 +10,7 @@ import { Character3D } from './Character3D';
 import { HandCards } from './HandCards';
 import { SceneCardDisplay } from './SceneCardDisplay';
 import { CenterCards } from './CenterCards';
+import { PlayerHandBacks } from './PlayerHandBacks';
 
 interface GameCanvasProps {
   room: PublicRoomView;
@@ -108,30 +109,28 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
   return (
     <Canvas
       shadows
-      camera={{ position: [0, 2.0, 4.8], fov: 50 }}
-      gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
+      camera={{ position: [0, 2.8, 5.5], fov: 55 }}
+      gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.9 }}
       style={{ background: 'linear-gradient(180deg, #fef3e2 0%, #fce4d6 50%, #f8d5c0 100%)' }}
       dpr={[1, 2]}
     >
       <MouseLook />
       <Suspense fallback={null}>
-        {/* 环境反射 — 工作室级光照 */}
-        <Environment preset="apartment" />
-
-        {/* 灯光 — 多层暖色调电影级布光 */}
-        <ambientLight intensity={0.4} color="#fff5e6" />
+        {/* 灯光 — 柔和暖色调，避免过曝 */}
+        <ambientLight intensity={0.35} color="#fff5e6" />
+        <hemisphereLight args={['#ffeedd', '#d4c4a8', 0.4]} />
         <directionalLight
           position={[4, 7, 4]}
-          intensity={1.2}
+          intensity={0.7}
           color="#ffeedd"
           castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-bias={-0.0001}
         />
-        <pointLight position={[0, 3.5, 0]} intensity={1.5} color="#ffd4a3" distance={10} decay={2} />
-        <pointLight position={[-4, 2.5, -3]} intensity={0.6} color="#ffc4d6" distance={8} decay={2} />
-        <pointLight position={[4, 2, -2]} intensity={0.4} color="#c4d4ff" distance={6} decay={2} />
-        <spotLight position={[0, 6, 0]} angle={0.5} penumbra={0.8} intensity={0.8} color="#fff0d4" castShadow />
+        <pointLight position={[0, 3.5, 0]} intensity={0.5} color="#ffd4a3" distance={10} decay={2} />
+        <pointLight position={[-4, 2.5, -3]} intensity={0.25} color="#ffc4d6" distance={8} decay={2} />
+        <pointLight position={[4, 2, -2]} intensity={0.2} color="#c4d4ff" distance={6} decay={2} />
+        <spotLight position={[0, 6, 0]} angle={0.5} penumbra={0.8} intensity={0.35} color="#fff0d4" castShadow />
 
         {/* 桌面场景 */}
         <TableScene />
@@ -147,18 +146,29 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
           const seat = otherSeats[i];
           if (!seat) return null;
           const char = CHARACTERS.find((c) => c.id === player.characterId);
+          // 手牌位置：玩家和桌子中心之间
+          const handX = seat.x * 0.75;
+          const handZ = seat.z * 0.75;
           return (
-            <Character3D
-              key={player.id}
-              character={char}
-              position={[seat.x, 0, seat.z]}
-              rotation={[0, seat.rotY, 0]}
-              playerName={player.name}
-              vitality={player.vitality}
-              friendship={player.friendship}
-              isActive={room.activePlayerId === player.id}
-              isDreaming={player.status === 'dream'}
-            />
+            <React.Fragment key={player.id}>
+              <Character3D
+                character={char}
+                position={[seat.x, 0, seat.z]}
+                rotation={[0, seat.rotY, 0]}
+                playerName={player.name}
+                vitality={player.vitality}
+                friendship={player.friendship}
+                isActive={room.activePlayerId === player.id}
+                isDreaming={player.status === 'dream'}
+              />
+              {/* 该玩家面前的手牌（牌背） */}
+              <PlayerHandBacks
+                position={[handX, 0, handZ]}
+                rotationY={seat.rotY}
+                cardCount={player.handCount || 4}
+                isActive={room.activePlayerId === player.id}
+              />
+            </React.Fragment>
           );
         })}
 
@@ -183,10 +193,10 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
         />
       </Suspense>
 
-      {/* 后处理 — Bloom辉光 + 暗角 + 抗锯齿 */}
+      {/* 后处理 — 轻微辉光 + 暗角 + 抗锯齿 */}
       <EffectComposer>
-        <Bloom intensity={0.4} luminanceThreshold={0.6} luminanceSmoothing={0.3} mipmapBlur />
-        <Vignette eskil={false} offset={0.2} darkness={0.5} />
+        <Bloom intensity={0.15} luminanceThreshold={0.85} luminanceSmoothing={0.3} mipmapBlur />
+        <Vignette eskil={false} offset={0.25} darkness={0.4} />
         <SMAA />
       </EffectComposer>
     </Canvas>
