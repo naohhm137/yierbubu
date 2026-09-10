@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "C:\\Users\\29755\\DoubaoWork\\chats\\2026-09-10\\new-chat-1\\yierbubu\\apps\\web\\public\\characters\\yier.png",
+    "width": 1024,
+    "height": 1024,
+    "foregroundCoverage": 0.1415,
+    "largestComponentFraction": 0.7628,
+    "pHash": 12297688645001456298,
+    "duplicateOfHash": null
+  }
+}

@@ -2,7 +2,7 @@ import React from 'react';
 import { GameProvider, useGame } from './GameContext.js';
 import { MainMenu } from './components/MainMenu.js';
 import { Lobby } from './components/Lobby.js';
-import { GameTable } from './components/GameTable.js';
+import { GameTable3D } from './components/GameTable3D.js';
 import { ResultScreen } from './components/ResultScreen.js';
 import { RulesPage } from './components/RulesPage.js';
 import { CodexPage } from './components/CodexPage.js';
@@ -35,7 +35,7 @@ function AppContent() {
 
   return (
     <>
-      <Background />
+      {screen !== 'game' && <Background />}
       {error && <div className="error-toast">⚠️ {error}</div>}
       <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 50 }}>
         <div className="connection-status">
@@ -45,7 +45,7 @@ function AppContent() {
       </div>
       {screen === 'menu' && <MainMenu />}
       {screen === 'lobby' && <Lobby />}
-      {screen === 'game' && <GameTable />}
+      {screen === 'game' && <GameTable3D />}
       {screen === 'result' && <ResultScreen />}
       {screen === 'rules' && <RulesPage />}
       {screen === 'codex' && <CodexPage />}
