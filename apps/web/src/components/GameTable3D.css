@@ -805,3 +805,176 @@
     transform: scale(0.95);
   }
 }
+
+/* ---------- 回合横幅 ---------- */
+.game3d-turn-banner {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  animation: turnBannerIn 0.5s ease-out, turnBannerOut 0.5s ease-in 2s forwards;
+  pointer-events: none;
+}
+
+.game3d-turn-banner-text {
+  display: inline-block;
+  background: linear-gradient(135deg, #ff6b9d, #ff8fab);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 12px 36px;
+  border-radius: 50px;
+  box-shadow: 0 8px 32px rgba(255, 107, 157, 0.5), 0 0 0 3px rgba(255, 255, 255, 0.3);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+@keyframes turnBannerIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-30px) scale(0.8); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes turnBannerOut {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+}
+
+/* ---------- 目标选择提示 ---------- */
+.game3d-target-hint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 120px;
+  background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.3) 100%);
+  cursor: pointer;
+}
+
+.game3d-target-hint-text {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.95), rgba(102, 187, 106, 0.95));
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  padding: 14px 28px;
+  border-radius: 50px;
+  box-shadow: 0 8px 32px rgba(76, 175, 80, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  animation: targetHintPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes targetHintPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+.game3d-target-cancel-btn {
+  background: rgba(255,255,255,0.25);
+  border: 2px solid rgba(255,255,255,0.5);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.game3d-target-cancel-btn:hover {
+  background: rgba(255,255,255,0.4);
+}
+
+/* ---------- 技能详情弹窗 ---------- */
+.game3d-skill-popup {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+}
+
+.game3d-skill-popup-content {
+  background: linear-gradient(135deg, #fff9f0, #fff5e6);
+  border-radius: 24px;
+  padding: 28px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 4px rgba(255, 215, 0, 0.3);
+  animation: skillPopupIn 0.3s ease-out;
+}
+
+@keyframes skillPopupIn {
+  from { opacity: 0; transform: scale(0.8) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.game3d-skill-popup-name {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #8b4513;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.game3d-skill-popup-desc {
+  font-size: 1rem;
+  color: #5d4037;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.game3d-skill-popup-cost {
+  font-size: 0.9rem;
+  color: #8b6914;
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 8px;
+  background: rgba(255, 215, 0, 0.15);
+  border-radius: 12px;
+}
+
+/* ---------- 操作提示 ---------- */
+.game3d-hint-target {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+/* ---------- 规则面板优化 ---------- */
+.game3d-rules-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.game3d-rule-item {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(255, 249, 240, 0.7);
+  border-radius: 12px;
+  border-left: 4px solid #ff8fab;
+}
+
+.game3d-rule-item strong {
+  color: #8b4513;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.game3d-rule-item p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #5d4037;
+  line-height: 1.5;
+}
