@@ -12,6 +12,7 @@ interface Card3DProps {
   faceUp?: boolean;
   isHovered?: boolean;
   isSelected?: boolean;
+  isPlayable?: boolean;
   onClick?: () => void;
   onPointerOver?: () => void;
   onPointerOut?: () => void;
@@ -256,6 +257,7 @@ export function Card3D({
   faceUp = true,
   isHovered = false,
   isSelected = false,
+  isPlayable = true,
   onClick,
   onPointerOver,
   onPointerOut,
@@ -271,7 +273,7 @@ export function Card3D({
 
   useFrame(() => {
     if (!groupRef.current) return;
-    const target = isSelected ? position[1] + 0.25 : isHovered ? position[1] + 0.12 : position[1];
+    const target = isSelected ? position[1] + 0.3 : isHovered ? position[1] + 0.12 : position[1];
     groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, target, 0.15);
   });
 
@@ -294,7 +296,7 @@ export function Card3D({
       {faceUp && (
         <mesh position={[0, 0, 0.023]}>
           <planeGeometry args={[0.58, 0.87]} />
-          <meshStandardMaterial map={frontTexture} roughness={0.35} metalness={0.05} />
+          <meshStandardMaterial map={frontTexture} roughness={0.35} metalness={0.05} transparent={!isPlayable} opacity={isPlayable ? 1 : 0.45} />
         </mesh>
       )}
 
@@ -306,11 +308,25 @@ export function Card3D({
         </mesh>
       )}
 
-      {/* 选中高亮 */}
+      {/* 选中高亮 — 金色光环+底部聚光 */}
       {isSelected && (
-        <mesh position={[0, 0, 0.026]}>
-          <ringGeometry args={[0.34, 0.37, 32]} />
-          <meshBasicMaterial color="#ffd700" transparent opacity={0.95} side={THREE.DoubleSide} />
+        <>
+          <mesh position={[0, 0, 0.026]}>
+            <ringGeometry args={[0.34, 0.37, 32]} />
+            <meshBasicMaterial color="#ffd700" transparent opacity={0.95} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, -0.55, 0]}>
+            <planeGeometry args={[0.7, 0.08]} />
+            <meshBasicMaterial color="#ffd700" transparent opacity={0.6} />
+          </mesh>
+        </>
+      )}
+
+      {/* 不可用锁图标 */}
+      {!isPlayable && faceUp && (
+        <mesh position={[0, 0, 0.03]}>
+          <planeGeometry args={[0.2, 0.2]} />
+          <meshBasicMaterial color="#666" transparent opacity={0.8} />
         </mesh>
       )}
     </group>

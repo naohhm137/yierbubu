@@ -18,13 +18,23 @@ export function GameTable3D() {
   const [showCardDetail, setShowCardDetail] = useState<Card | null>(null);
   const [showLog, setShowLog] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [showSkillDetail, setShowSkillDetail] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [turnBanner, setTurnBanner] = useState<string | null>(null);
 
-  // 3D场景加载完成后隐藏加载屏
   React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2500);
+    const timer = setTimeout(() => setIsLoading(false), 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // 回合切换提示
+  React.useEffect(() => {
+    if (room && room.activePlayerId === playerId) {
+      setTurnBanner('轮到你了！');
+      const t = setTimeout(() => setTurnBanner(null), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [room?.activePlayerId, playerId]);
 
   if (!room || !privateView) return null;
 
@@ -41,10 +51,15 @@ export function GameTable3D() {
     const card = getCard(cardId);
     if (!card) return;
 
+    // 如果已选中同一张牌，取消选中
+    if (selectedCard === cardId) {
+      setSelectedCard(null);
+      setPendingAction(null);
+      return;
+    }
+
     // 检查是否需要目标
-    const needsTarget = card.effects.some(
-      (e) => e.target === 'other' || e.target === 'any'
-    );
+    const needsTarget = card.effects.some((e) => e.target === 'other' || e.target === 'any');
 
     if (needsTarget) {
       setSelectedCard(cardId);
@@ -52,23 +67,20 @@ export function GameTable3D() {
     } else {
       doAction('playCard', { cardId });
       setSelectedCard(null);
+      setPendingAction(null);
     }
   };
 
-  const handleTargetSelect = (targetId: string) => {
+  const handleSelectTarget = (targetId: string) => {
     if (!pendingAction) return;
     if (pendingAction.type === 'playCard') {
       doAction('playCard', { cardId: pendingAction.cardId, targetId });
     } else if (pendingAction.type === 'useSkill') {
       doAction('useSkill', { targetId });
     } else if (pendingAction.type === 'gift') {
-      if (selectedCard) {
-        doAction('gift', { cardId: selectedCard, targetId });
-      }
+      if (selectedCard) doAction('gift', { cardId: selectedCard, targetId });
     } else if (pendingAction.type === 'exchange') {
-      if (selectedCard) {
-        doAction('exchange', { cardId: selectedCard, targetId });
-      }
+      if (selectedCard) doAction('exchange', { cardId: selectedCard, targetId });
     }
     setPendingAction(null);
     setSelectedCard(null);
@@ -95,17 +107,17 @@ export function GameTable3D() {
     setPendingAction({ type: 'exchange' });
   };
 
-  const needsTarget = pendingAction !== null;
-  const targetablePlayers = room.players.filter((p) => p.id !== playerId && p.status === 'active');
+  const cancelTarget = () => {
+    setPendingAction(null);
+    setSelectedCard(null);
+  };
 
-  // 手牌转换为 Card 对象（3D 组件需要）
-  const handCards = useMemo(() => {
-    return myHand.map((id) => getCard(id)).filter(Boolean) as Card[];
-  }, [myHand]);
+  const targetMode = pendingAction !== null;
+
+  const handCards = useMemo(() => myHand.map((id) => getCard(id)).filter(Boolean) as Card[], [myHand]);
 
   return (
     <div className="game3d-container">
-      {/* 加载屏幕 — 防止黑屏 */}
       {isLoading && (
         <div className="game3d-loading">
           <div className="game3d-loading-spinner" />
@@ -114,7 +126,6 @@ export function GameTable3D() {
         </div>
       )}
 
-      {/* 3D 主场景 */}
       <div className="game3d-canvas-wrapper">
         <GameCanvas
           room={room}
@@ -122,10 +133,33 @@ export function GameTable3D() {
           onPlayCard={handlePlayCard}
           onUseSkill={handleSkill}
           onEndTurn={() => doAction('endTurn')}
+          onSelectTarget={handleSelectTarget}
+          targetMode={targetMode}
+          selectedCardId={selectedCard}
         />
       </div>
 
-      {/* 顶部 UI 覆盖层 */}
+      {/* 回合横幅 */}
+      {turnBanner && (
+        <div className="game3d-turn-banner">
+          <span className="game3d-turn-banner-text">{turnBanner}</span>
+        </div>
+      )}
+
+      {/* 目标选择提示 */}
+      {targetMode && (
+        <div className="game3d-target-hint" onClick={cancelTarget}>
+          <div className="game3d-target-hint-text" onClick={(e) => e.stopPropagation()}>
+            {pendingAction?.type === 'playCard' && '🎯 点击3D角色选择目标'}
+            {pendingAction?.type === 'useSkill' && '✨ 点击3D角色选择技能目标'}
+            {pendingAction?.type === 'gift' && '🎁 点击3D角色选择赠送对象'}
+            {pendingAction?.type === 'exchange' && '🔄 点击3D角色选择交换对象'}
+            <button className="game3d-target-cancel-btn" onClick={cancelTarget}>取消</button>
+          </div>
+        </div>
+      )}
+
+      {/* 顶部 UI */}
       <div className="game3d-top-bar">
         <div className="game3d-round-info">
           <span className="game3d-round">第 {room.round}/{room.maxRounds} 轮</span>
@@ -139,15 +173,13 @@ export function GameTable3D() {
           {activePlayer && <span className="game3d-active-player">轮到 {activePlayer.name}</span>}
           {isMyTurn && <span className="game3d-my-turn">● 你的回合</span>}
         </div>
-        <button className="game3d-log-btn" onClick={() => setShowLog(!showLog)}>
-          📜
-        </button>
-        <button className="game3d-log-btn" onClick={() => setShowRules(!showRules)}>
-          ❓
-        </button>
+        <div className="game3d-top-btns">
+          <button className="game3d-icon-btn" onClick={() => setShowLog(!showLog)} title="行动记录">📜</button>
+          <button className="game3d-icon-btn" onClick={() => setShowRules(!showRules)} title="规则">❓</button>
+        </div>
       </div>
 
-      {/* 心愿进度 — 左上角 */}
+      {/* 心愿进度 */}
       <div className="game3d-wish-panel">
         <div className="game3d-wish-title">⭐ 大心愿星</div>
         <div className="game3d-wish-bar">
@@ -156,7 +188,7 @@ export function GameTable3D() {
         <div className="game3d-wish-text">{room.wishProgress}/4 · 碎片 {room.wishFragments}</div>
       </div>
 
-      {/* 我的状态 — 左下角 */}
+      {/* 我的状态 */}
       {me && myChar && (
         <div className="game3d-my-status">
           <img src={myChar.avatar} alt={myChar.name} className="game3d-my-avatar" />
@@ -170,29 +202,25 @@ export function GameTable3D() {
           </div>
           {me.identityId && (
             <div className={`game3d-identity-badge identity-${me.identityId}`}>
-              {me.identityId === 'guide' ? '引路人' :
-               me.identityId === 'guardian' ? '守护伙伴' :
-               me.identityId === 'trickster' ? '捣蛋客' : '追梦者'}
+              {me.identityId === 'guide' ? '引路人' : me.identityId === 'guardian' ? '守护伙伴' : me.identityId === 'trickster' ? '捣蛋客' : '追梦者'}
             </div>
           )}
         </div>
       )}
 
-      {/* 日志面板 — 可折叠 */}
+      {/* 日志面板 */}
       {showLog && (
         <div className="game3d-log-panel">
           <div className="game3d-log-title">📜 行动记录</div>
           <div className="game3d-log-list">
             {room.actionLog.slice(-15).reverse().map((log) => (
-              <div key={log.id} className={`game3d-log-entry game3d-log-${log.type}`}>
-                {log.message}
-              </div>
+              <div key={log.id} className={`game3d-log-entry game3d-log-${log.type}`}>{log.message}</div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 规则帮助面板 */}
+      {/* 规则面板 */}
       {showRules && (
         <div className="game3d-rules-panel">
           <div className="game3d-rules-header">
@@ -200,30 +228,30 @@ export function GameTable3D() {
             <button className="game3d-rules-close" onClick={() => setShowRules(false)}>✕</button>
           </div>
           <div className="game3d-rules-content">
-            <div className="game3d-rule-item">
-              <strong>🎯 目标</strong>
-              <p>修复大心愿星（完成4个心愿任务），或阻止修复。每个身份有不同胜利条件。</p>
+            <div className="game3d-rule-item"><strong>🎯 目标</strong><p>修复大心愿星（完成4个心愿任务），或阻止修复。每个身份有不同胜利条件。</p></div>
+            <div className="game3d-rule-item"><strong>🔄 回合</strong><p>每回合：翻场景牌 → 补手牌 → 依次行动。你的回合可以抽牌、出牌、用技能、赠送/交换卡牌。</p></div>
+            <div className="game3d-rule-item"><strong>❤️ 活力</strong><p>活力归零进入"梦境旁观者"状态，仍可每轮帮助一次。</p></div>
+            <div className="game3d-rule-item"><strong>💕 友情值</strong><p>帮助他人获得友情值（上限6），可用于发动强力技能、抵消负面效果、救回队友。</p></div>
+            <div className="game3d-rule-item"><strong>🎭 身份</strong><p>引路人：修复心愿星 | 守护伙伴：保护引路人 | 捣蛋客：阻止修复 | 追梦者：完成个人秘密目标</p></div>
+            <div className="game3d-rule-item"><strong>✨ 技能</strong><p>每个角色有独特技能，每回合可用一次。点击"技能"按钮后选择目标。</p></div>
+            <div className="game3d-rule-item"><strong>🖱️ 操作</strong><p>点击手牌选中（金色高亮），再次点击打出。需要目标的牌会进入目标选择模式，点击3D角色即可。拖动屏幕可360°旋转视角。</p></div>
+          </div>
+        </div>
+      )}
+
+      {/* 技能详情弹窗 */}
+      {showSkillDetail && myChar && (
+        <div className="game3d-skill-popup" onClick={() => setShowSkillDetail(false)}>
+          <div className="game3d-skill-popup-content" onClick={(e) => e.stopPropagation()}>
+            <div className="game3d-skill-popup-name">✨ {myChar.skill.name}</div>
+            <div className="game3d-skill-popup-desc">{myChar.skill.effect}</div>
+            <div className="game3d-skill-popup-cost">
+              {myChar.skill.cost ? `消耗：${myChar.skill.cost}` : '无消耗'}
+              {myChar.skill.cooldown ? ` · ${myChar.skill.cooldown}` : ' · 每回合1次'}
             </div>
-            <div className="game3d-rule-item">
-              <strong>🔄 回合</strong>
-              <p>每回合：翻场景牌 → 补手牌 → 依次行动。你的回合可以抽牌、出牌、用技能、赠送/交换卡牌。</p>
-            </div>
-            <div className="game3d-rule-item">
-              <strong>❤️ 活力</strong>
-              <p>活力归零进入"梦境旁观者"状态，仍可每轮帮助一次。</p>
-            </div>
-            <div className="game3d-rule-item">
-              <strong>💕 友情值</strong>
-              <p>帮助他人获得友情值（上限6），可用于发动强力技能、抵消负面效果、救回队友。</p>
-            </div>
-            <div className="game3d-rule-item">
-              <strong>🎭 身份</strong>
-              <p>引路人：修复心愿星 | 守护伙伴：保护引路人 | 捣蛋客：阻止修复 | 追梦者：完成个人秘密目标</p>
-            </div>
-            <div className="game3d-rule-item">
-              <strong>✨ 技能</strong>
-              <p>每个角色有独特技能，每回合可用一次。点击"技能"按钮后选择目标。</p>
-            </div>
+            <button className="game3d-btn game3d-btn-skill" onClick={() => { handleSkill(); setShowSkillDetail(false); }} disabled={!isMyTurn || me?.usedSkillThisTurn}>
+              {me?.usedSkillThisTurn ? '本回合已用' : '使用技能'}
+            </button>
           </div>
         </div>
       )}
@@ -231,8 +259,10 @@ export function GameTable3D() {
       {/* 底部操作栏 */}
       <div className="game3d-action-bar">
         <div className="game3d-action-hint">
-          {selectedCard ? (
-            <span>已选：{getCard(selectedCard)?.name} — 点击操作按钮</span>
+          {targetMode ? (
+            <span className="game3d-hint-target">👆 点击3D角色选择目标，或点击空白处取消</span>
+          ) : selectedCard ? (
+            <span>已选：{getCard(selectedCard)?.name} — 再次点击打出，或选择操作</span>
           ) : isMyTurn ? (
             <span>点击手牌选中，或使用技能</span>
           ) : (
@@ -240,98 +270,37 @@ export function GameTable3D() {
           )}
         </div>
         <div className="game3d-action-buttons">
-          <button
-            className="game3d-btn game3d-btn-draw"
-            disabled={!isMyTurn || me?.hasDrawnThisTurn}
-            onClick={() => doAction('draw')}
-          >
+          <button className="game3d-btn game3d-btn-draw" disabled={!isMyTurn || me?.hasDrawnThisTurn} onClick={() => doAction('draw')}>
             📥 抽牌
           </button>
-          <button
-            className="game3d-btn game3d-btn-skill"
-            disabled={!isMyTurn || me?.usedSkillThisTurn}
-            onClick={handleSkill}
-          >
+          <button className="game3d-btn game3d-btn-skill" disabled={!isMyTurn || me?.usedSkillThisTurn} onClick={() => setShowSkillDetail(true)}>
             ✨ 技能
           </button>
-          <button
-            className="game3d-btn game3d-btn-gift"
-            disabled={!isMyTurn || !selectedCard}
-            onClick={handleGift}
-          >
+          <button className="game3d-btn game3d-btn-gift" disabled={!isMyTurn || !selectedCard} onClick={handleGift}>
             🎁 赠送
           </button>
-          <button
-            className="game3d-btn game3d-btn-exchange"
-            disabled={!isMyTurn || !selectedCard}
-            onClick={handleExchange}
-          >
+          <button className="game3d-btn game3d-btn-exchange" disabled={!isMyTurn || !selectedCard} onClick={handleExchange}>
             🔄 交换
           </button>
-          <button
-            className="game3d-btn game3d-btn-defend"
-            disabled={!isMyTurn}
-            onClick={() => doAction('defend')}
-          >
+          <button className="game3d-btn game3d-btn-defend" disabled={!isMyTurn} onClick={() => doAction('defend')}>
             🛡️ 防守
           </button>
-          <button
-            className="game3d-btn game3d-btn-hoard"
-            disabled={!isMyTurn}
-            onClick={() => doAction('hoard')}
-          >
+          <button className="game3d-btn game3d-btn-hoard" disabled={!isMyTurn} onClick={() => doAction('hoard')}>
             💫 积蓄
           </button>
           {isDream && (
-            <button
-              className="game3d-btn game3d-btn-dream"
-              disabled={me?.dreamHelpUsed}
-              onClick={() => {
-                const target = targetablePlayers[0];
-                if (target) doAction('dreamHelp', { targetId: target.id });
-              }}
-            >
+            <button className="game3d-btn game3d-btn-dream" disabled={me?.dreamHelpUsed} onClick={() => {
+              const target = room.players.find((p) => p.id !== playerId && p.status === 'active');
+              if (target) doAction('dreamHelp', { targetId: target.id });
+            }}>
               💤 梦境帮助
             </button>
           )}
-          <button
-            className="game3d-btn game3d-btn-end"
-            disabled={!isMyTurn}
-            onClick={() => doAction('endTurn')}
-          >
+          <button className="game3d-btn game3d-btn-end" disabled={!isMyTurn} onClick={() => doAction('endTurn')}>
             ⏭️ 结束回合
           </button>
         </div>
       </div>
-
-      {/* 目标选择浮层 */}
-      {needsTarget && (
-        <div className="game3d-target-overlay" onClick={() => { setPendingAction(null); setSelectedCard(null); }}>
-          <div className="game3d-target-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="game3d-target-title">
-              {pendingAction?.type === 'playCard' && '选择目标玩家'}
-              {pendingAction?.type === 'useSkill' && '选择技能目标'}
-              {pendingAction?.type === 'gift' && '选择赠送对象'}
-              {pendingAction?.type === 'exchange' && '选择交换对象'}
-            </div>
-            <div className="game3d-target-options">
-              {targetablePlayers.map((p) => {
-                const char = p.characterId ? getCharacter(p.characterId) : null;
-                return (
-                  <div key={p.id} className="game3d-target-option" onClick={() => handleTargetSelect(p.id)}>
-                    {char && <img src={char.avatar} alt="" className="game3d-target-avatar" />}
-                    <span>{p.name}</span>
-                    <span className="game3d-target-stats">❤️{p.vitality} 💕{p.friendship}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <button className="game3d-btn game3d-btn-cancel" onClick={() => { setPendingAction(null); setSelectedCard(null); }}>
-              取消
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 场景规则提示 */}
       {scene && (

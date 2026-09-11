@@ -13,6 +13,7 @@ interface Character3DProps {
   friendship?: number;
   isActive?: boolean;
   isDreaming?: boolean;
+  isTargetable?: boolean;
 }
 
 /* ============================================================
@@ -379,6 +380,24 @@ function SupportCharacter({ characterId }: { characterId: string }) {
   );
 }
 
+/* 可选择目标 — 脉冲绿色光环 */
+function TargetableRing() {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame((state) => {
+    if (!ref.current) return;
+    const t = state.clock.elapsedTime;
+    const pulse = 0.5 + Math.sin(t * 4) * 0.3;
+    (ref.current.material as THREE.MeshBasicMaterial).opacity = pulse;
+    ref.current.scale.setScalar(1 + Math.sin(t * 3) * 0.08);
+  });
+  return (
+    <mesh ref={ref} position={[0, -0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0.38, 0.52, 48]} />
+      <meshBasicMaterial color="#4caf50" transparent opacity={0.7} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
 /* 角色模型路由 */
 function CharacterModel({ characterId, blink }: { characterId?: string; blink: number }) {
   if (characterId === 'yier') return <YierModel blink={blink} />;
@@ -399,6 +418,7 @@ export function Character3D({
   friendship = 0,
   isActive = false,
   isDreaming = false,
+  isTargetable = false,
 }: Character3DProps) {
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -492,12 +512,17 @@ export function Character3D({
         </Billboard>
       )}
 
-      {/* 活跃光环 — 在脚下 */}
+      {/* 活跃光环 */}
       {isActive && (
         <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.35, 0.45, 48]} />
           <meshBasicMaterial color="#2196f3" transparent opacity={0.7} side={THREE.DoubleSide} />
         </mesh>
+      )}
+
+      {/* 可选择目标光环 — 脉冲绿色 */}
+      {isTargetable && (
+        <TargetableRing />
       )}
 
       {/* 梦境状态 */}
