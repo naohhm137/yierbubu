@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useGame } from '../GameContext.js';
 import { getCard, getCharacter, getScene, categoryName, type Card } from '@yierbubu/shared';
 import { GameCanvas } from './three/GameCanvas.js';
+import { ErrorBoundary } from './ErrorBoundary.js';
 import './GameTable3D.css';
 
 type PendingAction =
@@ -20,12 +21,21 @@ export function GameTable3D() {
   const [showRules, setShowRules] = useState(false);
   const [showSkillDetail, setShowSkillDetail] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadTimeout, setLoadTimeout] = useState(false);
   const [turnBanner, setTurnBanner] = useState<string | null>(null);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2000);
+    // 最长等待8秒，超时后强制显示场景（避免一直黑屏）
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      setLoadTimeout(true);
+    }, 8000);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleCanvasReady = () => {
+    setIsLoading(false);
+  };
 
   // 回合切换提示
   React.useEffect(() => {
@@ -122,21 +132,31 @@ export function GameTable3D() {
         <div className="game3d-loading">
           <div className="game3d-loading-spinner" />
           <div className="game3d-loading-text">正在进入萌境...</div>
-          <div className="game3d-loading-sub">加载3D场景和角色中</div>
+          <div className="game3d-loading-sub">
+            {loadTimeout ? '加载时间较长，正在尝试进入...' : '加载3D场景和角色中，请稍候'}
+          </div>
+          {loadTimeout && (
+            <button className="game3d-btn game3d-btn-end" style={{ marginTop: 16 }} onClick={() => setIsLoading(false)}>
+              直接进入
+            </button>
+          )}
         </div>
       )}
 
       <div className="game3d-canvas-wrapper">
-        <GameCanvas
-          room={room}
-          privateView={privateView}
-          onPlayCard={handlePlayCard}
-          onUseSkill={handleSkill}
-          onEndTurn={() => doAction('endTurn')}
-          onSelectTarget={handleSelectTarget}
-          targetMode={targetMode}
-          selectedCardId={selectedCard}
-        />
+        <ErrorBoundary>
+          <GameCanvas
+            room={room}
+            privateView={privateView}
+            onPlayCard={handlePlayCard}
+            onUseSkill={handleSkill}
+            onEndTurn={() => doAction('endTurn')}
+            onSelectTarget={handleSelectTarget}
+            targetMode={targetMode}
+            selectedCardId={selectedCard}
+            onReady={handleCanvasReady}
+          />
+        </ErrorBoundary>
       </div>
 
       {/* 回合横幅 */}
