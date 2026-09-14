@@ -38,8 +38,8 @@ function AppContent() {
       {screen !== 'game' && <Background />}
       {error && <div className="error-toast">⚠️ {error}</div>}
       <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 50 }}>
-        <div className="connection-status">
-          <span className={`connection-dot ${connected ? '' : 'disconnected'}`} />
+        <div className="connection-status" role="status" aria-live="polite" aria-atomic="true">
+          <span className={`connection-dot ${connected ? '' : 'disconnected'}`} aria-hidden="true" />
           {connected ? '已连接' : '连接中...'}
         </div>
       </div>

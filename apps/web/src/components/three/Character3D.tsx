@@ -1,6 +1,6 @@
-import React, { useRef, useMemo, Suspense, useState } from 'react';
+﻿import React, { useRef, useMemo, Suspense, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Float, Text, Billboard, RoundedBox } from '@react-three/drei';
+import { Float, Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Character } from '@yierbubu/shared';
 
@@ -17,7 +17,7 @@ interface Character3DProps {
 }
 
 /* ============================================================
-   精致材质 — 毛绒sheen + 次表面散射 + 清漆
+   绮捐嚧鏉愯川 鈥?姣涚粧sheen + 娆¤〃闈㈡暎灏?+ 娓呮紗
    ============================================================ */
 function FurMaterial({ color, sheen = 0.7 }: { color: string; sheen?: number }) {
   return (
@@ -47,38 +47,38 @@ function SkinMaterial({ color }: { color: string }) {
 }
 
 /* ============================================================
-   精致眼睛 — 眼白+虹膜+瞳孔+双层高光+眼底反光
+   绮捐嚧鐪肩潧 鈥?鐪肩櫧+铏硅啘+鐬冲瓟+鍙屽眰楂樺厜+鐪煎簳鍙嶅厜
    ============================================================ */
 function CuteEye({ position, size = 0.07, blink = 0 }: { position: [number, number, number]; size?: number; blink?: number }) {
   const scaleY = 1 - blink * 0.9;
   return (
     <group position={position} scale={[1, scaleY, 1]}>
-      {/* 眼白 */}
+      {/* 鐪肩櫧 */}
       <mesh position={[0, 0, 0.002]}>
         <sphereGeometry args={[size, 32, 32]} />
         <meshPhysicalMaterial color="#ffffff" roughness={0.12} clearcoat={0.9} clearcoatRoughness={0.08} />
       </mesh>
-      {/* 虹膜 */}
+      {/* 铏硅啘 */}
       <mesh position={[0, -size * 0.08, size * 0.55]}>
         <sphereGeometry args={[size * 0.58, 24, 24]} />
         <meshPhysicalMaterial color="#2d1810" roughness={0.1} clearcoat={0.95} clearcoatRoughness={0.05} />
       </mesh>
-      {/* 瞳孔 */}
+      {/* 鐬冲瓟 */}
       <mesh position={[0, -size * 0.08, size * 0.85]}>
         <sphereGeometry args={[size * 0.32, 16, 16]} />
         <meshStandardMaterial color="#0a0503" roughness={0.06} />
       </mesh>
-      {/* 主高光 */}
+      {/* 涓婚珮鍏?*/}
       <mesh position={[-size * 0.18, size * 0.25, size * 1.05]}>
         <sphereGeometry args={[size * 0.2, 12, 12]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
-      {/* 次高光 */}
+      {/* 娆￠珮鍏?*/}
       <mesh position={[size * 0.22, -size * 0.2, size * 0.98]}>
         <sphereGeometry args={[size * 0.1, 8, 8]} />
         <meshBasicMaterial color="#ffffff" transparent opacity={0.7} />
       </mesh>
-      {/* 眼底反光 */}
+      {/* 鐪煎簳鍙嶅厜 */}
       <mesh position={[0, -size * 0.38, size * 0.85]}>
         <sphereGeometry args={[size * 0.08, 8, 8]} />
         <meshBasicMaterial color="#ffb3c6" transparent opacity={0.5} />
@@ -87,7 +87,7 @@ function CuteEye({ position, size = 0.07, blink = 0 }: { position: [number, numb
   );
 }
 
-/* 腮红 — canvas径向渐变 */
+/* 鑵孩 鈥?canvas寰勫悜娓愬彉 */
 function Blush({ position, color = '#ff9eb5', size = 0.075 }: { position: [number, number, number]; color?: string; size?: number }) {
   const texture = useMemo(() => {
     const c = document.createElement('canvas');
@@ -111,86 +111,86 @@ function Blush({ position, color = '#ff9eb5', size = 0.075 }: { position: [numbe
 }
 
 /* ============================================================
-   一二 — 真正的3D人形模型（基于原型精确比例）
-   二头身：大头小身体，黑圆耳朵，黑蝴蝶领结，粉腮红，吐舌
+   涓€浜?鈥?鐪熸鐨?D浜哄舰妯″瀷锛堝熀浜庡師鍨嬬簿纭瘮渚嬶級
+   浜屽ご韬細澶уご灏忚韩浣擄紝榛戝渾鑰虫湹锛岄粦铦磋澏棰嗙粨锛岀矇鑵孩锛屽悙鑸?
    ============================================================ */
 function YierModel({ blink }: { blink: number }) {
   return (
     <group>
-      {/* 身体 — 小而圆（二头身，身体更小） */}
+      {/* 韬綋 鈥?灏忚€屽渾锛堜簩澶磋韩锛岃韩浣撴洿灏忥級 */}
       <group position={[0, 0.3, 0]}>
         <mesh castShadow>
           <sphereGeometry args={[0.2, 48, 48]} />
           <FurMaterial color="#f8f4ee" />
         </mesh>
-        {/* 肚皮 */}
+        {/* 鑲氱毊 */}
         <mesh position={[0, -0.02, 0.15]}>
           <sphereGeometry args={[0.13, 32, 32]} />
           <SkinMaterial color="#fffaf5" />
         </mesh>
       </group>
 
-      {/* 左手 — 更小 */}
+      {/* 宸︽墜 鈥?鏇村皬 */}
       <mesh position={[-0.24, 0.34, 0.07]} castShadow>
         <sphereGeometry args={[0.08, 24, 24]} />
         <FurMaterial color="#f8f4ee" />
       </mesh>
-      {/* 右手 */}
+      {/* 鍙虫墜 */}
       <mesh position={[0.24, 0.34, 0.07]} castShadow>
         <sphereGeometry args={[0.08, 24, 24]} />
         <FurMaterial color="#f8f4ee" />
       </mesh>
 
-      {/* 左脚 */}
+      {/* 宸﹁剼 */}
       <mesh position={[-0.11, 0.07, 0.08]} castShadow>
         <sphereGeometry args={[0.095, 24, 24]} />
         <meshPhysicalMaterial color="#2a2a2a" roughness={0.4} clearcoat={0.3} />
       </mesh>
-      {/* 右脚 */}
+      {/* 鍙宠剼 */}
       <mesh position={[0.11, 0.07, 0.08]} castShadow>
         <sphereGeometry args={[0.095, 24, 24]} />
         <meshPhysicalMaterial color="#2a2a2a" roughness={0.4} clearcoat={0.3} />
       </mesh>
 
-      {/* 小尾巴 */}
+      {/* 灏忓熬宸?*/}
       <mesh position={[0, 0.28, -0.2]} castShadow>
         <sphereGeometry args={[0.06, 20, 20]} />
         <FurMaterial color="#f8f4ee" />
       </mesh>
 
-      {/* 头部 — 非常大的圆（二头身，头占2/3） */}
+      {/* 澶撮儴 鈥?闈炲父澶х殑鍦嗭紙浜屽ご韬紝澶村崰2/3锛?*/}
       <group position={[0, 0.78, 0]}>
         <mesh castShadow>
           <sphereGeometry args={[0.4, 64, 64]} />
           <FurMaterial color="#f8f4ee" sheen={0.75} />
         </mesh>
 
-        {/* 左耳 — 黑色实心圆，更靠近头顶 */}
+        {/* 宸﹁€?鈥?榛戣壊瀹炲績鍦嗭紝鏇撮潬杩戝ご椤?*/}
         <mesh position={[-0.26, 0.32, -0.03]} castShadow>
           <sphereGeometry args={[0.115, 32, 32]} />
           <meshPhysicalMaterial color="#1f1f1f" roughness={0.5} clearcoat={0.2} sheen={0.4} />
         </mesh>
-        {/* 右耳 */}
+        {/* 鍙宠€?*/}
         <mesh position={[0.26, 0.32, -0.03]} castShadow>
           <sphereGeometry args={[0.115, 32, 32]} />
           <meshPhysicalMaterial color="#1f1f1f" roughness={0.5} clearcoat={0.2} sheen={0.4} />
         </mesh>
 
-        {/* 眼睛 — 更小，间距更大 */}
+        {/* 鐪肩潧 鈥?鏇村皬锛岄棿璺濇洿澶?*/}
         <CuteEye position={[-0.14, 0.07, 0.35]} size={0.06} blink={blink} />
         <CuteEye position={[0.14, 0.07, 0.35]} size={0.06} blink={blink} />
 
-        {/* 腮红 — 更大 */}
+        {/* 鑵孩 鈥?鏇村ぇ */}
         <Blush position={[-0.23, -0.05, 0.32]} color="#ff9eb5" size={0.08} />
         <Blush position={[0.23, -0.05, 0.32]} color="#ff9eb5" size={0.08} />
 
-        {/* 鼻子 */}
+        {/* 榧诲瓙 */}
         <mesh position={[0, -0.01, 0.38]}>
           <sphereGeometry args={[0.022, 16, 16]} />
           <meshStandardMaterial color="#1f1f1f" roughness={0.25} />
         </mesh>
 
-        {/* 嘴巴 — 吐舌 */}
+        {/* 鍢村反 鈥?鍚愯垖 */}
         <group position={[0, -0.11, 0.36]}>
           <mesh>
             <torusGeometry args={[0.042, 0.014, 12, 24, Math.PI]} />
@@ -203,13 +203,13 @@ function YierModel({ blink }: { blink: number }) {
         </group>
       </group>
 
-      {/* 头身衔接 — 脖子 */}
+      {/* 澶磋韩琛旀帴 鈥?鑴栧瓙 */}
       <mesh position={[0, 0.52, 0]}>
         <sphereGeometry args={[0.14, 24, 24]} />
         <FurMaterial color="#f8f4ee" />
       </mesh>
 
-      {/* 黑色蝴蝶领结 — 更高位置，靠近头底部 */}
+      {/* 榛戣壊铦磋澏棰嗙粨 鈥?鏇撮珮浣嶇疆锛岄潬杩戝ご搴曢儴 */}
       <group position={[0, 0.54, 0.18]}>
         <mesh position={[-0.075, 0, 0]} rotation={[0, 0, 0.45]} castShadow>
           <sphereGeometry args={[0.065, 24, 24]} />
@@ -229,61 +229,61 @@ function YierModel({ blink }: { blink: number }) {
 }
 
 /* ============================================================
-   布布 — 真正的3D人形模型
-   棕色小熊，棕耳朵，黄腮红，温和微笑
+   甯冨竷 鈥?鐪熸鐨?D浜哄舰妯″瀷
+   妫曡壊灏忕唺锛屾鑰虫湹锛岄粍鑵孩锛屾俯鍜屽井绗?
    ============================================================ */
 function BubuModel({ blink }: { blink: number }) {
   return (
     <group>
-      {/* 身体 */}
+      {/* 韬綋 */}
       <group position={[0, 0.3, 0]}>
         <mesh castShadow>
           <sphereGeometry args={[0.21, 48, 48]} />
           <FurMaterial color="#b8895a" />
         </mesh>
-        {/* 肚皮 */}
+        {/* 鑲氱毊 */}
         <mesh position={[0, -0.02, 0.15]}>
           <sphereGeometry args={[0.14, 32, 32]} />
           <SkinMaterial color="#d4a574" />
         </mesh>
       </group>
 
-      {/* 左手 */}
+      {/* 宸︽墜 */}
       <mesh position={[-0.25, 0.34, 0.07]} castShadow>
         <sphereGeometry args={[0.082, 24, 24]} />
         <FurMaterial color="#b8895a" />
       </mesh>
-      {/* 右手 */}
+      {/* 鍙虫墜 */}
       <mesh position={[0.25, 0.34, 0.07]} castShadow>
         <sphereGeometry args={[0.082, 24, 24]} />
         <FurMaterial color="#b8895a" />
       </mesh>
 
-      {/* 左脚 */}
+      {/* 宸﹁剼 */}
       <mesh position={[-0.11, 0.07, 0.08]} castShadow>
         <sphereGeometry args={[0.098, 24, 24]} />
         <FurMaterial color="#9a7040" />
       </mesh>
-      {/* 右脚 */}
+      {/* 鍙宠剼 */}
       <mesh position={[0.11, 0.07, 0.08]} castShadow>
         <sphereGeometry args={[0.098, 24, 24]} />
         <FurMaterial color="#9a7040" />
       </mesh>
 
-      {/* 小尾巴 */}
+      {/* 灏忓熬宸?*/}
       <mesh position={[0, 0.28, -0.21]} castShadow>
         <sphereGeometry args={[0.065, 20, 20]} />
         <FurMaterial color="#b8895a" />
       </mesh>
 
-      {/* 头部 */}
+      {/* 澶撮儴 */}
       <group position={[0, 0.78, 0]}>
         <mesh castShadow>
           <sphereGeometry args={[0.4, 64, 64]} />
           <FurMaterial color="#b8895a" sheen={0.75} />
         </mesh>
 
-        {/* 左耳 — 棕色圆耳，内耳浅色 */}
+        {/* 宸﹁€?鈥?妫曡壊鍦嗚€筹紝鍐呰€虫祬鑹?*/}
         <group position={[-0.27, 0.28, -0.02]}>
           <mesh castShadow>
             <sphereGeometry args={[0.125, 32, 32]} />
@@ -294,7 +294,7 @@ function BubuModel({ blink }: { blink: number }) {
             <SkinMaterial color="#d4a574" />
           </mesh>
         </group>
-        {/* 右耳 */}
+        {/* 鍙宠€?*/}
         <group position={[0.27, 0.28, -0.02]}>
           <mesh castShadow>
             <sphereGeometry args={[0.125, 32, 32]} />
@@ -306,34 +306,34 @@ function BubuModel({ blink }: { blink: number }) {
           </mesh>
         </group>
 
-        {/* 眼睛 */}
+        {/* 鐪肩潧 */}
         <CuteEye position={[-0.14, 0.07, 0.35]} size={0.06} blink={blink} />
         <CuteEye position={[0.14, 0.07, 0.35]} size={0.06} blink={blink} />
 
-        {/* 黄色腮红 — 更大 */}
+        {/* 榛勮壊鑵孩 鈥?鏇村ぇ */}
         <Blush position={[-0.23, -0.05, 0.32]} color="#ffd54f" size={0.085} />
         <Blush position={[0.23, -0.05, 0.32]} color="#ffd54f" size={0.085} />
 
-        {/* 嘴周浅色 — 更合适的大小 */}
+        {/* 鍢村懆娴呰壊 鈥?鏇村悎閫傜殑澶у皬 */}
         <mesh position={[0, -0.09, 0.32]}>
           <sphereGeometry args={[0.09, 28, 28]} />
           <SkinMaterial color="#d4a574" />
         </mesh>
 
-        {/* 鼻子 */}
+        {/* 榧诲瓙 */}
         <mesh position={[0, -0.02, 0.38]}>
           <sphereGeometry args={[0.024, 16, 16]} />
           <meshStandardMaterial color="#4a3020" roughness={0.25} />
         </mesh>
 
-        {/* 微笑嘴 */}
+        {/* 寰瑧鍢?*/}
         <mesh position={[0, -0.12, 0.36]}>
           <torusGeometry args={[0.044, 0.014, 12, 24, Math.PI]} />
           <meshStandardMaterial color="#3d1f10" roughness={0.35} />
         </mesh>
       </group>
 
-      {/* 头身衔接 — 脖子 */}
+      {/* 澶磋韩琛旀帴 鈥?鑴栧瓙 */}
       <mesh position={[0, 0.52, 0]}>
         <sphereGeometry args={[0.14, 24, 24]} />
         <FurMaterial color="#b8895a" />
@@ -343,44 +343,32 @@ function BubuModel({ blink }: { blink: number }) {
 }
 
 /* ============================================================
-   通用配角3D模型 — 用AI生成的3D渲染图作为正面，有厚度的立体牌
-   （配角用立体牌，主角用真正3D人形）
+   閫氱敤閰嶈3D妯″瀷 鈥?鐢ˋI鐢熸垚鐨?D娓叉煋鍥句綔涓烘闈紝鏈夊帤搴︾殑绔嬩綋鐗?
+   锛堥厤瑙掔敤绔嬩綋鐗岋紝涓昏鐢ㄧ湡姝?D浜哄舰锛?
    ============================================================ */
 function SupportCharacter({ characterId }: { characterId: string }) {
-  const texture = useMemo(() => {
-    const loader = new THREE.TextureLoader();
-    const tex = loader.load(`/characters_3d/${characterId}_3d.png`);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 8;
-    return tex;
-  }, [characterId]);
-
-  const colors: Record<string, string> = {
-    duoduo: '#b8d8f0', tangtang: '#ffc8d8', asong: '#8bc34a',
-    yueyue: '#9575cd', xiaoban: '#ffb74d', mimi: '#f48fb1',
-    qiaoqiao: '#e0e8f8', tuantuan: '#ffd8d8', huahua: '#ba68c8', kaka: '#90a4ae',
+  const palette: Record<string, [string,string,string]> = {
+    duoduo:['#b8d8f0','#eaf7ff','#8ac8ed'], tangtang:['#ffc8d8','#fff0f5','#ef7fa8'],
+    asong:['#8bc34a','#dff2b8','#5e8e43'], yueyue:['#9575cd','#e6dafa','#d8c6ff'],
+    xiaoban:['#ffb74d','#fff0cf','#e58e2f'], mimi:['#f48fb1','#ffe1ea','#ffd64a'],
+    qiaoqiao:['#e0e8f8','#ffffff','#bca8ed'], tuantuan:['#ffd8d8','#fff0e6','#ff8c9a'],
+    huahua:['#ba68c8','#f0d7f5','#f0a9ff'], kaka:['#b87333','#f1d0aa','#e4b15f'],
   };
-
-  return (
-    <group>
-      <RoundedBox args={[0.85, 1.2, 0.16]} radius={0.05} smoothness={6} castShadow receiveShadow>
-        <meshPhysicalMaterial map={texture} roughness={0.4} clearcoat={0.35} alphaTest={0.05} />
-        <meshPhysicalMaterial color={colors[characterId] || '#ccc'} roughness={0.5} />
-        <meshPhysicalMaterial color={colors[characterId] || '#ccc'} roughness={0.5} />
-        <meshPhysicalMaterial color={colors[characterId] || '#ddd'} roughness={0.45} />
-        <meshPhysicalMaterial color="#aaa" roughness={0.55} />
-        <meshPhysicalMaterial color={colors[characterId] || '#bbb'} roughness={0.5} />
-      </RoundedBox>
-      {/* 底座 */}
-      <mesh position={[0, -0.7, 0]} castShadow>
-        <cylinderGeometry args={[0.32, 0.36, 0.06, 32]} />
-        <meshPhysicalMaterial color={colors[characterId] || '#888'} roughness={0.3} clearcoat={0.5} />
-      </mesh>
-    </group>
-  );
+  const [fur, belly, accent] = palette[characterId] ?? palette.duoduo;
+  return <group>
+    <mesh position={[0,0.29,0]} scale={[.28,.34,.24]} castShadow receiveShadow><sphereGeometry args={[1,28,20]}/><FurMaterial color={fur} sheen={.45}/></mesh>
+    <mesh position={[0,.10,.205]} scale={[.14,.16,.035]}><sphereGeometry args={[1,20,14]}/><SkinMaterial color={belly}/></mesh>
+    {([-1,1] as const).map(side=><group key={side} position={[side*.23,.37,0]}><mesh scale={[.12,.14,.11]} castShadow><sphereGeometry args={[1,20,16]}/><FurMaterial color={fur} sheen={.35}/></mesh><mesh position={[0,-.005,.09]} scale={[.062,.078,.018]}><sphereGeometry args={[1,16,12]}/><SkinMaterial color={belly}/></mesh></group>)}
+    {([-1,1] as const).map(side=><mesh key={side} position={[side*.12,.03,.13]} scale={[.15,.11,.17]} castShadow><sphereGeometry args={[1,20,16]}/><FurMaterial color={fur} sheen={.45}/></mesh>)}
+    <mesh position={[0,.29,-.24]} scale={[.09,.09,.09]} castShadow><sphereGeometry args={[1,16,12]}/><FurMaterial color={fur} sheen={.4}/></mesh>
+    <mesh position={[0,.74,0]} scale={[.40,.36,.34]} castShadow receiveShadow><sphereGeometry args={[1,32,24]}/><FurMaterial color={fur} sheen={.55}/></mesh>
+    {([-1,1] as const).map(side=><group key={side}><CuteEye position={[side*.14,.05,.30]} size={.054}/><Blush position={[side*.22,-.06,.285]} color={accent} size={.064}/></group>)}
+    <mesh position={[0,-.015,.335]} scale={[.034,.026,.024]}><sphereGeometry args={[1,14,12]}/><meshStandardMaterial color="#36231e" roughness={.3}/></mesh>
+    <mesh position={[0,-.095,.32]}><torusGeometry args={[.036,.010,10,20,Math.PI]}/><meshStandardMaterial color="#36231e" roughness={.3}/></mesh>
+    <mesh position={[0,1.08,.02]} scale={[.10,.06,.04]} castShadow><sphereGeometry args={[1,16,12]}/><meshStandardMaterial color={accent} roughness={.55}/></mesh>
+  </group>;
 }
-
-/* 可选择目标 — 脉冲绿色光环 */
+/* 鍙€夋嫨鐩爣 鈥?鑴夊啿缁胯壊鍏夌幆 */
 function TargetableRing() {
   const ref = useRef<THREE.Mesh>(null);
   useFrame((state) => {
@@ -398,7 +386,7 @@ function TargetableRing() {
   );
 }
 
-/* 角色模型路由 */
+/* 瑙掕壊妯″瀷璺敱 */
 function CharacterModel({ characterId, blink }: { characterId?: string; blink: number }) {
   if (characterId === 'yier') return <YierModel blink={blink} />;
   if (characterId === 'bubu') return <BubuModel blink={blink} />;
@@ -407,7 +395,7 @@ function CharacterModel({ characterId, blink }: { characterId?: string; blink: n
 }
 
 /* ============================================================
-   主组件
+   涓荤粍浠?
    ============================================================ */
 export function Character3D({
   character,
@@ -423,27 +411,17 @@ export function Character3D({
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
   const [pressed, setPressed] = useState(false);
-  const [blink, setBlink] = useState(0);
+  const blink = 0;
 
-  // 眨眼动画
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-    const blinkCycle = (t + position[0]) % 4;
-    if (blinkCycle > 3.85 && blinkCycle < 4) {
-      setBlink(Math.min(1, (blinkCycle - 3.85) / 0.075));
-    } else {
-      setBlink(0);
-    }
-  });
-
+  // 鐪ㄧ溂鍔ㄧ敾
   useFrame((state) => {
     if (!groupRef.current) return;
     const t = state.clock.elapsedTime;
-    // 呼吸动画 — 更微妙
+    // 鍛煎惛鍔ㄧ敾 鈥?鏇村井濡?
     const breathe = 1 + Math.sin(t * 1.5 + position[0] * 1.5) * 0.006;
     const pressScale = pressed ? 0.95 : 1;
     groupRef.current.scale.setScalar(breathe * pressScale);
-    // 漂浮 — 更微妙，基础位置让脚接触桌面
+    // 婕傛诞 鈥?鏇村井濡欙紝鍩虹浣嶇疆璁╄剼鎺ヨЕ妗岄潰
     groupRef.current.position.y = position[1] - 0.06 + Math.sin(t * 1.1 + position[0] * 2) * 0.008;
     if (isActive) {
       groupRef.current.rotation.z = Math.sin(t * 2) * 0.012;
@@ -469,7 +447,7 @@ export function Character3D({
         </group>
       </Suspense>
 
-      {/* 名字牌 */}
+      {/* 鍚嶅瓧鐗?*/}
       {playerName && (
         <Billboard position={[0, 1.22, 0]}>
           <mesh>
@@ -490,7 +468,7 @@ export function Character3D({
         </Billboard>
       )}
 
-      {/* 活力心心 */}
+      {/* 娲诲姏蹇冨績 */}
       <Billboard position={[-0.14, 1.38, 0]}>
         {Array.from({ length: 4 }).map((_, i) => (
           <mesh key={i} position={[i * 0.085, 0, 0]}>
@@ -500,7 +478,7 @@ export function Character3D({
         ))}
       </Billboard>
 
-      {/* 友情值 */}
+      {/* 鍙嬫儏鍊?*/}
       {friendship > 0 && (
         <Billboard position={[0.17, 1.38, 0]}>
           {Array.from({ length: Math.min(friendship, 6) }).map((_, i) => (
@@ -512,7 +490,7 @@ export function Character3D({
         </Billboard>
       )}
 
-      {/* 活跃光环 */}
+      {/* 娲昏穬鍏夌幆 */}
       {isActive && (
         <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.35, 0.45, 48]} />
@@ -520,17 +498,17 @@ export function Character3D({
         </mesh>
       )}
 
-      {/* 可选择目标光环 — 脉冲绿色 */}
+      {/* 鍙€夋嫨鐩爣鍏夌幆 鈥?鑴夊啿缁胯壊 */}
       {isTargetable && (
         <TargetableRing />
       )}
 
-      {/* 梦境状态 */}
+      {/* 姊﹀鐘舵€?*/}
       {isDreaming && (
         <Billboard position={[0.3, 1.5, 0]}>
-          <Text fontSize={0.1} color="#9575cd" anchorX="center" fontWeight="bold">💤</Text>
+          <Text fontSize={0.1} color="#9575cd" anchorX="center" fontWeight="bold">馃挙</Text>
         </Billboard>
       )}
     </group>
   );
-}
+}\n

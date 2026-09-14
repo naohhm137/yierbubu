@@ -2,7 +2,7 @@ services:
   - type: web
     name: yierbubu-mengjing
     runtime: docker
-    repo: https://github.com/your-username/yierbubu
+    repo: https://github.com/naohhm137/yierbubu
     plan: free
     numInstances: 1
     healthCheckPath: /api/health
