@@ -511,4 +511,4 @@ export function Character3D({
       )}
     </group>
   );
-}\n
+}
