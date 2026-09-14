@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { useGame } from '../GameContext.js';
 import { categoryName, type Character, type Card } from '@yierbubu/shared';
+import { ErrorBoundary } from './ErrorBoundary.js';
+
+const CharacterPreview = lazy(() => import('./CharacterPreview.js'));
 
 export function CodexPage() {
   const { setScreen, characters, cards } = useGame();
@@ -32,12 +35,12 @@ export function CodexPage() {
       {tab === 'characters' && (
         <div className="codex-grid">
           {characters.map((char) => (
-            <div key={char.id} className="codex-character" onClick={() => setSelectedChar(char)}>
+            <button type="button" key={char.id} className="codex-character" style={{ border: 0, color: 'inherit', font: 'inherit', cursor: 'pointer' }} onClick={() => setSelectedChar(char)} aria-label={`查看${char.name}的角色详情`}>
               <img src={char.avatar} alt={char.name} />
               <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem' }}>{char.name}</div>
               <div style={{ fontSize: '0.8rem', color: 'var(--color-ink-soft)' }}>{char.title}</div>
               {char.isProtagonist && <div style={{ fontSize: '0.75rem', color: 'var(--color-bubu)' }}>⭐ 主角</div>}
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -62,9 +65,13 @@ export function CodexPage() {
       {/* 角色详情 */}
       {selectedChar && (
         <div className="target-overlay" onClick={() => setSelectedChar(null)}>
-          <div className="target-panel" style={{ maxWidth: 450 }} onClick={(e) => e.stopPropagation()}>
-            <img src={selectedChar.avatar} alt={selectedChar.name} style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: 'var(--shadow-md)' }} />
-            <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 'var(--space-md)' }}>{selectedChar.name}</h2>
+          <div className="target-panel" role="dialog" aria-modal="true" aria-labelledby="character-detail-name" style={{ maxWidth: 450, maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <ErrorBoundary key={selectedChar.id} fallback={<div style={{ height: 260, display: 'grid', placeItems: 'center', background: '#faf5ed', borderRadius: 20 }}><img src={selectedChar.avatar} alt={selectedChar.name} style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: 'var(--shadow-md)' }} /></div>}>
+              <Suspense fallback={<div style={{ height: 260, display: 'grid', placeItems: 'center', background: '#faf5ed', borderRadius: 20 }}><img src={selectedChar.avatar} alt={selectedChar.name} style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: 'var(--shadow-md)' }} /></div>}>
+                <CharacterPreview characterId={selectedChar.id} />
+              </Suspense>
+            </ErrorBoundary>
+            <h2 id="character-detail-name" style={{ fontFamily: 'var(--font-display)', marginTop: 'var(--space-md)' }}>{selectedChar.name}</h2>
             <div style={{ color: 'var(--color-ink-soft)', marginBottom: 'var(--space-md)' }}>{selectedChar.title} · {selectedChar.species}</div>
             <p style={{ lineHeight: 1.8, marginBottom: 'var(--space-sm)' }}><strong>性格：</strong>{selectedChar.personality}</p>
             <p style={{ lineHeight: 1.8, marginBottom: 'var(--space-sm)' }}><strong>背景：</strong>{selectedChar.background}</p>

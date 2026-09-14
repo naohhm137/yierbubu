@@ -1,5 +1,4 @@
-import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import React, { useMemo } from 'react';
 import { RoundedBox, Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -22,28 +21,32 @@ export function TableScene() {
 
       {/* 圆桌 — 温暖木纹 */}
       <group position={[0, 0.75, 0]}>
-        {/* 桌面 */}
+        {/* 桌面 — 可可木边与柔和鼠尾草绿毡垫 */}
         <mesh castShadow receiveShadow>
           <cylinderGeometry args={[2.8, 2.8, 0.12, 64]} />
           <meshStandardMaterial color="#c9a87c" roughness={0.6} />
         </mesh>
-        {/* 桌面边缘装饰 */}
-        <mesh position={[0, 0.07, 0]}>
+        <mesh position={[0, 0.082, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[2.64, 2.64, 0.035, 64]} />
+          <meshStandardMaterial color="#a8b99a" roughness={0.92} />
+        </mesh>
+        {/* 桌面边缘装饰 — torus 必须水平放置在 XZ 平面 */}
+        <mesh position={[0, 0.07, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
           <torusGeometry args={[2.78, 0.04, 16, 64]} />
-          <meshStandardMaterial color="#a88860" roughness={0.5} />
+          <meshStandardMaterial color="#9f7650" roughness={0.52} />
         </mesh>
         {/* 桌面中心装饰 — 心愿星图案 */}
-        <mesh position={[0, 0.065, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[0, 0.105, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[0.5, 32]} />
           <meshStandardMaterial color="#f5e6d0" roughness={0.7} emissive="#ffd700" emissiveIntensity={0.1} />
         </mesh>
         {/* 桌腿 */}
-        <mesh position={[0, -0.5, 0]} castShadow>
-          <cylinderGeometry args={[0.15, 0.2, 0.9, 32]} />
+        <mesh position={[0, -0.36, 0]} castShadow>
+          <cylinderGeometry args={[0.15, 0.2, 0.65, 32]} />
           <meshStandardMaterial color="#a88860" roughness={0.7} />
         </mesh>
         {/* 底座 */}
-        <mesh position={[0, -0.95, 0]} castShadow>
+        <mesh position={[0, -0.64, 0]} castShadow>
           <cylinderGeometry args={[0.6, 0.7, 0.1, 32]} />
           <meshStandardMaterial color="#8b7355" roughness={0.7} />
         </mesh>
@@ -66,17 +69,10 @@ export function TableScene() {
 
 /** 桌面小道具 */
 function TableProps() {
-  const cupRef = useRef<THREE.Group>(null);
-  useFrame((state) => {
-    if (cupRef.current) {
-      cupRef.current.rotation.y = state.clock.elapsedTime * 0.1;
-    }
-  });
-
   return (
     <group>
       {/* 茶杯 — 左侧 */}
-      <group ref={cupRef} position={[-1.8, 0.88, -0.5]}>
+      <group position={[-1.8, 0.885, -0.5]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.12, 0.1, 0.15, 32]} />
           <meshStandardMaterial color="#fff8f0" roughness={0.3} />
@@ -96,7 +92,7 @@ function TableProps() {
       </group>
 
       {/* 小点心盘 — 右侧 */}
-      <group position={[1.8, 0.86, 0.3]}>
+      <group position={[1.8, 0.825, 0.3]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.2, 0.18, 0.03, 32]} />
           <meshStandardMaterial color="#f5e6d0" roughness={0.4} />
@@ -111,7 +107,7 @@ function TableProps() {
       </group>
 
       {/* 小台灯 — 桌面后方 */}
-      <group position={[0, 0.88, -1.8]}>
+      <group position={[0, 0.82, -1.8]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.08, 0.1, 0.02, 32]} />
           <meshStandardMaterial color="#d4a574" roughness={0.5} />

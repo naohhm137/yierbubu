@@ -23,6 +23,7 @@ export function GameTable3D() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadTimeout, setLoadTimeout] = useState(false);
   const [turnBanner, setTurnBanner] = useState<string | null>(null);
+  const handCards = useMemo(() => (privateView?.hand ?? []).map((id) => getCard(id)).filter(Boolean) as Card[], [privateView?.hand]);
 
   React.useEffect(() => {
     // 最长等待8秒，超时后强制显示场景（避免一直黑屏）
@@ -61,9 +62,8 @@ export function GameTable3D() {
     const card = getCard(cardId);
     if (!card) return;
 
-    // 如果已选中同一张牌，取消选中
-    if (selectedCard === cardId) {
-      setSelectedCard(null);
+    if (selectedCard !== cardId) {
+      setSelectedCard(cardId);
       setPendingAction(null);
       return;
     }
@@ -124,8 +124,6 @@ export function GameTable3D() {
 
   const targetMode = pendingAction !== null;
 
-  const handCards = useMemo(() => myHand.map((id) => getCard(id)).filter(Boolean) as Card[], [myHand]);
-
   return (
     <div className="game3d-container">
       {isLoading && (
@@ -175,6 +173,9 @@ export function GameTable3D() {
             {pendingAction?.type === 'gift' && '🎁 点击3D角色选择赠送对象'}
             {pendingAction?.type === 'exchange' && '🔄 点击3D角色选择交换对象'}
             <button className="game3d-target-cancel-btn" onClick={cancelTarget}>取消</button>
+            <div className="game3d-target-options">
+              {room.players.filter(p => p.status === 'active' && (p.id !== playerId || (pendingAction?.type === 'playCard' && getCard(pendingAction.cardId)?.effects.some(e => e.target === 'any')))).map(p => <button key={p.id} onClick={() => handleSelectTarget(p.id)}>{p.name}</button>)}
+            </div>
           </div>
         </div>
       )}
@@ -277,10 +278,15 @@ export function GameTable3D() {
       )}
 
       {/* 底部操作栏 */}
+      <div className="game3d-hand" aria-label="你的手牌">
+        {handCards.map((card,index) => <button key={`${card.id}-${index}`} className={`game3d-hand-card ${selectedCard === card.id ? 'selected' : ''}`} aria-pressed={selectedCard === card.id} disabled={!isMyTurn} onClick={() => handlePlayCard(card.id)}>
+          <strong>{card.name}</strong><small>{categoryName(card.category)}</small><span>{card.description}</span>
+        </button>)}
+      </div>
       <div className="game3d-action-bar">
         <div className="game3d-action-hint">
           {targetMode ? (
-            <span className="game3d-hint-target">👆 点击3D角色选择目标，或点击空白处取消</span>
+            <span className="game3d-hint-target">选择角色或上方名字，点击“取消”退出</span>
           ) : selectedCard ? (
             <span>已选：{getCard(selectedCard)?.name} — 再次点击打出，或选择操作</span>
           ) : isMyTurn ? (
@@ -290,6 +296,7 @@ export function GameTable3D() {
           )}
         </div>
         <div className="game3d-action-buttons">
+          {selectedCard && <button className="game3d-btn game3d-btn-end" disabled={!isMyTurn || targetMode} onClick={() => handlePlayCard(selectedCard)}>打出所选</button>}
           <button className="game3d-btn game3d-btn-draw" disabled={!isMyTurn || me?.hasDrawnThisTurn} onClick={() => doAction('draw')}>
             📥 抽牌
           </button>

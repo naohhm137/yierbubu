@@ -1049,8 +1049,7 @@ export function botTakeTurn(state: RoomState, playerId: string) {
     return c?.effects.some((e) => e.type === 'damage');
   });
   if (damageCards.length > 0 && weakest && rng() < 0.6) {
-    playerAction(state, playerId, 'playCard', { cardId: damageCards[0], targetId: weakest.id });
-    return;
+    if (playerAction(state, playerId, 'playCard', { cardId: damageCards[0], targetId: weakest.id }).ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
 
   // 2. 如果有治疗牌且自己血量低，使用
@@ -1059,15 +1058,13 @@ export function botTakeTurn(state: RoomState, playerId: string) {
     return c?.effects.some((e) => e.type === 'heal');
   });
   if (healCards.length > 0 && player.vitality <= 2) {
-    playerAction(state, playerId, 'playCard', { cardId: healCards[0] });
-    return;
+    if (playerAction(state, playerId, 'playCard', { cardId: healCards[0] }).ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
 
   // 3. 使用技能
   if (!player.usedSkillThisTurn && rng() < 0.5) {
     const target = strongest || weakest;
-    playerAction(state, playerId, 'useSkill', { targetId: target?.id });
-    return;
+    if (playerAction(state, playerId, 'useSkill', { targetId: target?.id }).ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
 
   // 4. 友情牌/守护牌
@@ -1077,22 +1074,19 @@ export function botTakeTurn(state: RoomState, playerId: string) {
   });
   if (friendlyCards.length > 0) {
     const target = enemies[Math.floor(rng() * enemies.length)];
-    playerAction(state, playerId, 'playCard', { cardId: friendlyCards[0], targetId: target?.id });
-    return;
+    if (playerAction(state, playerId, 'playCard', { cardId: friendlyCards[0], targetId: target?.id }).ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
 
   // 5. 抽牌
   if (!player.hasDrawnThisTurn) {
-    playerAction(state, playerId, 'draw');
-    return;
+    if (playerAction(state, playerId, 'draw').ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
 
   // 6. 任意牌
   if (player.hand.length > 0) {
     const cardId = player.hand[Math.floor(rng() * player.hand.length)];
     const target = enemies[Math.floor(rng() * enemies.length)];
-    playerAction(state, playerId, 'playCard', { cardId, targetId: target?.id });
-    return;
+    if (playerAction(state, playerId, 'playCard', { cardId, targetId: target?.id }).ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
 
   // 7. 结束回合

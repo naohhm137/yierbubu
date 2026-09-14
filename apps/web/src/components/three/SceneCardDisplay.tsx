@@ -19,7 +19,7 @@ export function SceneCardDisplay({ scene }: SceneCardDisplayProps) {
   });
 
   return (
-    <group position={[0, 1.3, 0]}>
+    <group position={[0, 1.02, 0]} scale={.48}>
       <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.3}>
         <group ref={groupRef}>
           {/* 场景牌底座 — 发光圆环 */}

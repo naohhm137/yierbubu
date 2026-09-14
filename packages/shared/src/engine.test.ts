@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 
 // 动态导入 TS（通过 tsx 或编译后运行）
 // 此文件在 npm test 中通过 tsx 执行
-const { createGame, playerAction, botTakeTurn, checkVictory, CARDS, CHARACTERS, SCENES, CONSTANTS } = await import('./index.ts');
+const { createGame, playerAction, botTakeTurn, checkVictory, setSeed, CARDS, CHARACTERS, SCENES, CONSTANTS } = await import('./index.ts');
 
 test('卡牌总数为 72 张', () => {
   assert.equal(CARDS.length, 72);
@@ -108,6 +108,25 @@ test('机器人可以完整执行回合', () => {
   botTakeTurn(game, activeId);
   // 不抛异常即通过
   assert.ok(true);
+});
+
+test('机器人执行一次行动后必须推进回合', () => {
+  setSeed(1);
+  const players = [
+    { id: 'bot-a', name: '机器人甲', isBot: true },
+    { id: 'bot-b', name: '机器人乙', isBot: true },
+    { id: 'bot-c', name: '机器人丙', isBot: true },
+    { id: 'bot-d', name: '机器人丁', isBot: true },
+  ];
+  const game = createGame({ roomId: 'BOT-PROGRESS', hostId: 'bot-a', players });
+  const activeId = game.activePlayerId!;
+  const active = game.players.find((p) => p.id === activeId)!;
+  // 倒流沙漏会回到手牌；旧 AI 只返回不结束回合，导致该机器人永久重复此牌。
+  active.hand = ['A05'];
+  active.hasDrawnThisTurn = true;
+  active.usedSkillThisTurn = true;
+  botTakeTurn(game, activeId);
+  assert.ok(game.phase === 'finished' || game.activePlayerId !== activeId);
 });
 
 test('5 个机器人完整模拟多轮不崩溃', () => {
