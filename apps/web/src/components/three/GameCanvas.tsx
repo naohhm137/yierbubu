@@ -228,18 +228,18 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
       <ResponsiveCamera />
       <OrbitControls
         enablePan={false}
-        minDistance={6}
-        maxDistance={12}
-        minPolarAngle={Math.PI / 6}
-        maxPolarAngle={Math.PI / 2.5}
-        target={[0, 0.7, 0]}
+        minDistance={7}
+        maxDistance={11}
+        minPolarAngle={Math.PI / 5}
+        maxPolarAngle={Math.PI / 2.35}
+        target={[0, 0.9, 0]}
         enableDamping
         dampingFactor={0.08}
         rotateSpeed={0.55}
         enableZoom={false}
       />
       <Suspense fallback={<LoadingFallback />}>
-        <SafeBackground />
+        {/* TableScene owns the seamless studio backdrop; avoid box-shaped fallback walls. */}
         <ambientLight intensity={0.9} color="#fff9f0" />
         <hemisphereLight args={['#fff6e8', '#c7b9a1', 1]} />
         <directionalLight position={[4, 8, 4]} intensity={2} color="#fff9f0" castShadow={device.shadows} shadow-mapSize={[device.shadowMapSize, device.shadowMapSize]} shadow-bias={-0.0001} shadow-normalBias={.035} />

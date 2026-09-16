@@ -38,6 +38,7 @@ export class RoomManager {
       turnOrder: [], deck: [], discard: [], wishFragments: 0, wishProgress: 0,
       actionLog: [], bannedCategory: null, lastTargetPlayerId: null,
       giftBonusUsed: false, starStageSkillFree: {}, meteorClaimed: false,
+      protagonistBondTriggered: false,
       settings: { mode: 'standard', playerCount: 5 }, logCounter: 0,
     };
     this.rooms.set(roomId, state);

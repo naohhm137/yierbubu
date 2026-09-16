@@ -106,6 +106,14 @@ function discardCard(state: RoomState, player: PlayerState, cardId: string) {
   }
 }
 
+function transferCard(player: PlayerState, target: PlayerState, cardId: string): boolean {
+  const index = player.hand.indexOf(cardId);
+  if (index < 0) return false;
+  player.hand.splice(index, 1);
+  target.hand.push(cardId);
+  return true;
+}
+
 function changeFriendship(player: PlayerState, delta: number) {
   player.friendship = clamp(player.friendship + delta, 0, CONSTANTS.MAX_FRIENDSHIP);
 }
@@ -231,6 +239,7 @@ export function createGame(opts: CreateGameOptions): RoomState {
     giftBonusUsed: false,
     starStageSkillFree: {},
     meteorClaimed: false,
+    protagonistBondTriggered: false,
     settings: { mode: 'standard', playerCount },
     logCounter: 0,
   };
@@ -280,7 +289,7 @@ export function startRound(state: RoomState) {
       if (p.hand.length > 0 && p.status === 'active') {
         const cardId = p.hand[Math.floor(rng() * p.hand.length)];
         gifts[pid] = cardId;
-        discardCard(state, p, cardId);
+        p.hand.splice(p.hand.indexOf(cardId), 1);
       }
     }
     for (let i = 0; i < order.length; i++) {
@@ -322,8 +331,8 @@ export function startRound(state: RoomState) {
 
 export function endTurn(state: RoomState) {
   if (!state.activePlayerId) return;
-  const current = getPlayer(state, state.activePlayerId)!;
-  current.hasActedThisTurn = true;
+  const current = getPlayer(state, state.activePlayerId);
+  if (current) current.hasActedThisTurn = true;
 
   // 找下一个 active 玩家
   const idx = state.turnOrder.indexOf(state.activePlayerId);
@@ -331,13 +340,13 @@ export function endTurn(state: RoomState) {
   for (let i = 1; i <= state.turnOrder.length; i++) {
     const candidateId = state.turnOrder[(idx + i) % state.turnOrder.length];
     const candidate = getPlayer(state, candidateId);
-    if (candidate && candidate.status === 'active') {
+    if (candidate && candidate.status === 'active' && !candidate.hasActedThisTurn) {
       nextId = candidateId;
       break;
     }
   }
 
-  if (nextId && nextId !== state.turnOrder[0]) {
+  if (nextId) {
     state.activePlayerId = nextId;
     const np = getPlayer(state, nextId)!;
     addLog(state, 'system', `轮到 ${np.name} 行动。`);
@@ -402,29 +411,31 @@ export function playerAction(
     return { ok: false, error: '你处于梦境旁观者状态，只能提供帮助' };
   }
 
+  let result: { ok: boolean; error?: string };
   switch (action) {
-    case 'draw':
-      return actionDraw(state, player);
-    case 'playCard':
-      return actionPlayCard(state, player, params.cardId!, params.targetId);
-    case 'useSkill':
-      return actionUseSkill(state, player, params.targetId, params.extra);
-    case 'gift':
-      return actionGift(state, player, params.cardId!, params.targetId!);
-    case 'exchange':
-      return actionExchange(state, player, params.cardId!, params.targetId!);
-    case 'defend':
-      return actionDefend(state, player);
-    case 'hoard':
-      return actionHoard(state, player);
-    case 'dreamHelp':
-      return actionDreamHelp(state, player, params.targetId!);
-    case 'endTurn':
-      endTurn(state);
-      return { ok: true };
-    default:
-      return { ok: false, error: '未知行动' };
+    case 'draw': result = actionDraw(state, player); break;
+    case 'playCard': result = actionPlayCard(state, player, params.cardId!, params.targetId); break;
+    case 'useSkill': result = actionUseSkill(state, player, params.targetId, params.extra); break;
+    case 'gift': result = actionGift(state, player, params.cardId!, params.targetId!); break;
+    case 'exchange': result = actionExchange(state, player, params.cardId!, params.targetId!); break;
+    case 'defend': result = actionDefend(state, player); break;
+    case 'hoard': result = actionHoard(state, player); break;
+    case 'dreamHelp': result = actionDreamHelp(state, player, params.targetId!); break;
+    case 'endTurn': endTurn(state); result = { ok: true }; break;
+    default: result = { ok: false, error: '未知行动' };
   }
+  if (result.ok && action !== 'endTurn' && state.phase === 'playing') {
+    if (action !== 'dreamHelp' && state.activePlayerId === player.id && player.status !== 'active') {
+      endTurn(state);
+    }
+    const victory = state.phase === 'playing' ? checkVictory(state) : null;
+    if (victory && state.phase === 'playing') {
+      state.winnerData = victory;
+      state.phase = 'finished';
+      addLog(state, 'victory', `游戏结束！${formatVictory(victory)}`);
+    }
+  }
+  return result;
 }
 
 function actionDraw(state: RoomState, player: PlayerState) {
@@ -516,10 +527,9 @@ function actionUseSkill(state: RoomState, player: PlayerState, targetId?: string
 function actionGift(state: RoomState, player: PlayerState, cardId: string, targetId: string) {
   if (!player.hand.includes(cardId)) return { ok: false, error: '你没有这张牌' };
   const target = getPlayer(state, targetId);
-  if (!target || target.status !== 'active') return { ok: false, error: '目标无效' };
+  if (!target || target.status !== 'active' || target.id === player.id) return { ok: false, error: '目标无效' };
 
-  discardCard(state, player, cardId);
-  target.hand.push(cardId);
+  transferCard(player, target, cardId);
   player.hasActedThisTurn = true;
 
   addLog(state, 'action', `${player.name} 送给 ${target.name} 一张牌。`, player.id);
@@ -552,15 +562,15 @@ function actionGift(state: RoomState, player: PlayerState, cardId: string, targe
 function actionExchange(state: RoomState, player: PlayerState, cardId: string, targetId: string) {
   if (!player.hand.includes(cardId)) return { ok: false, error: '你没有这张牌' };
   const target = getPlayer(state, targetId);
-  if (!target || target.status !== 'active' || target.hand.length === 0) {
+  if (!target || target.status !== 'active' || target.id === player.id || target.hand.length === 0) {
     return { ok: false, error: '目标无效或没有手牌' };
   }
 
-  const targetCard = target.hand[Math.floor(rng() * target.hand.length)];
-  discardCard(state, player, cardId);
-  discardCard(state, target, targetCard);
-  player.hand.push(targetCard);
-  target.hand.push(cardId);
+  const playerIndex = player.hand.indexOf(cardId);
+  const targetIndex = Math.floor(rng() * target.hand.length);
+  const targetCard = target.hand[targetIndex];
+  player.hand[playerIndex] = targetCard;
+  target.hand[targetIndex] = cardId;
   player.hasActedThisTurn = true;
 
   addLog(state, 'action', `${player.name} 与 ${target.name} 交换了一张手牌。`, player.id);
@@ -719,12 +729,12 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
       }
       case 'swapCard': {
         if (target && target.hand.length > 0 && player.hand.length > 0) {
-          const pc = player.hand[Math.floor(rng() * player.hand.length)];
-          const tc = target.hand[Math.floor(rng() * target.hand.length)];
-          discardCard(state, player, pc);
-          discardCard(state, target, tc);
-          player.hand.push(tc);
-          target.hand.push(pc);
+          const pi = Math.floor(rng() * player.hand.length);
+          const ti = Math.floor(rng() * target.hand.length);
+          const pc = player.hand[pi];
+          const tc = target.hand[ti];
+          player.hand[pi] = tc;
+          target.hand[ti] = pc;
           addLog(state, 'action', `${player.name} 与 ${target.name} 交换了一张手牌。`, player.id);
         }
         break;
@@ -856,8 +866,7 @@ function applySkill(
     case 'cloud_mail': {
       if (target && player.hand.length > 0) {
         const cardId = player.hand[Math.floor(rng() * player.hand.length)];
-        discardCard(state, player, cardId);
-        target.hand.push(cardId);
+        transferCard(player, target, cardId);
         changeFriendship(player, 1);
         changeFriendship(target, 1);
         addLog(state, 'skill', `朵朵将一张牌送给了 ${target.name}，双方 +1 友情。`, player.id);
@@ -961,17 +970,15 @@ function applySkill(
 
 // ---------- 一二&布布专属羁绊 ----------
 
-let protagonistBondTriggered = false;
-
 function checkProtagonistBond(state: RoomState, a: PlayerState, b: PlayerState) {
-  if (protagonistBondTriggered) return;
+  if (state.protagonistBondTriggered) return;
   const pair = [a.characterId, b.characterId].sort().join(',');
   if (pair === 'bubu,yier') {
     if (!a.bonds.includes(b.id)) {
       a.bonds.push(b.id);
       b.bonds.push(a.id);
     }
-    protagonistBondTriggered = true;
+    state.protagonistBondTriggered = true;
     drawCards(state, a, 1);
     drawCards(state, b, 1);
     changeFriendship(a, 1);

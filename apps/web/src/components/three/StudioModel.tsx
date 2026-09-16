@@ -12,7 +12,17 @@ export function createStudioInstance(source: THREE.Object3D, height = DISPLAY_HE
   const bounds = new THREE.Box3().setFromObject(instance);
   const actualHeight = bounds.max.y - bounds.min.y;
   if (!Number.isFinite(actualHeight) || actualHeight <= 0) {
-    throw new Error('角色模型没有有效尺寸');
+    // Some GLTF exporters omit world matrices on the first frame. Keep the
+    // authored scene visible while the renderer settles instead of blanking
+    // the preview; the next mount will normalize it.
+    instance.scale.setScalar(height / 2.6);
+    instance.traverse((object) => {
+      if ((object as THREE.Mesh).isMesh) {
+        (object as THREE.Mesh).castShadow = true;
+        (object as THREE.Mesh).receiveShadow = true;
+      }
+    });
+    return instance;
   }
   const center = bounds.getCenter(new THREE.Vector3());
   const scale = height / actualHeight;

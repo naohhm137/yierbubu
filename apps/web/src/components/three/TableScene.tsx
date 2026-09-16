@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { RoundedBox, Text, Float } from '@react-three/drei';
+import { Float, RoundedBox, Text, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { ErrorBoundary } from '../ErrorBoundary.js';
 
 /** 温馨的熊熊村小屋场景 — 圆桌、木质地板、暖色墙壁、窗户、装饰 */
-export function TableScene() {
+function LegacyTableScene() {
   return (
     <group>
       {/* 地板 — 温暖木质 */}
@@ -55,17 +56,40 @@ export function TableScene() {
       {/* 桌面道具 — 茶杯、点心、小灯 */}
       <TableProps />
 
-      {/* 背景墙壁 — 奶油色温馨小屋 */}
-      <BackgroundWalls />
-
-      {/* 窗户 — 透进暖光 */}
-      <Window />
-
-      {/* 墙上装饰 — 挂画、架子 */}
-      <WallDecor />
+      {/* Continuous studio shell: orbiting never reveals a wall corner. */}
+      <mesh position={[0, -0.03, 0]} rotation={[0, 0, 0]} receiveShadow>
+        <sphereGeometry args={[30, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshBasicMaterial color="#e9e5da" side={THREE.BackSide} />
+      </mesh>
     </group>
   );
 }
+
+/** Authored Blender table and seamless cyclorama. Kept as one GLB so the
+ * orbit camera never reveals a finite wall edge or duplicated furniture. */
+function AuthoredTableScene() {
+  const { scene } = useGLTF('/models/studio/table-scene.glb', false, false);
+  const model = useMemo(() => {
+    const copy = scene.clone(true);
+    copy.traverse((object) => {
+      if (!(object as THREE.Mesh).isMesh) return;
+      const mesh = object as THREE.Mesh;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+    });
+    return copy;
+  }, [scene]);
+  return <primitive object={model} dispose={null} />;
+}
+
+/** Keep the game playable when the optional authored table asset is missing
+ * or cannot be decoded. ErrorBoundary catches loader rejections while the
+ * procedural scene remains fully local and interactive. */
+export function TableScene() {
+  return <ErrorBoundary fallback={<LegacyTableScene />}><AuthoredTableScene /></ErrorBoundary>;
+}
+
+useGLTF.preload('/models/studio/table-scene.glb');
 
 /** 桌面小道具 */
 function TableProps() {

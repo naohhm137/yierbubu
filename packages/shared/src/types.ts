@@ -206,6 +206,7 @@ export interface RoomState {
   giftBonusUsed: boolean;         // 甜品派对：本轮首次赠送奖励已用
   starStageSkillFree: Record<string, boolean>; // 星光舞台：每人技能免费一次
   meteorClaimed: boolean;         // 心愿流星：碎片是否已被领取
+  protagonistBondTriggered: boolean;
   winnerData?: VictoryResult;
   settings: {
     mode: 'standard';
