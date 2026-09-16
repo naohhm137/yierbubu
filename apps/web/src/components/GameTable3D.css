@@ -279,6 +279,36 @@
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.game3d-action-primary {
+  display: flex;
+  gap: 8px;
+}
+
+.game3d-action-secondary {
+  display: flex;
+  gap: 6px;
+}
+
+.game3d-btn-sm {
+  padding: 8px 10px !important;
+  font-size: 0.9rem !important;
+  min-width: 38px;
+}
+
+.game3d-btn-primary {
+  background: linear-gradient(135deg, #ff8fab, #ff6b9d) !important;
+  color: white !important;
+  font-weight: bold !important;
+  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.4) !important;
+  padding: 10px 20px !important;
+}
+
+.game3d-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 107, 157, 0.5) !important;
 }
 
 .game3d-btn {
@@ -517,6 +547,28 @@
 .game3d-loading-sub {
   font-size: 0.85rem;
   color: #A09080;
+}
+
+.game3d-loading-bar {
+  width: 200px;
+  height: 8px;
+  background: rgba(139, 115, 85, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.game3d-loading-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff8fab, #ffd93d);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.game3d-loading-percent {
+  font-size: 0.8rem;
+  color: #8b7355;
+  margin-top: 4px;
 }
 
 /* ---------- 响应式 — 平板 ---------- */
@@ -799,6 +851,175 @@
   .game3d-my-stats {
     font-size: 0.65rem;
   }
+}
+
+/* ---------- 新手引导 ---------- */
+.game3d-tutorial-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.game3d-tutorial-box {
+  background: linear-gradient(135deg, #fff9f0, #fff5e6);
+  border-radius: 24px;
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+  animation: tutorialIn 0.4s ease-out;
+}
+
+@keyframes tutorialIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.game3d-tutorial-title {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #8b4513;
+  margin-bottom: 20px;
+}
+
+.game3d-tutorial-steps {
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.game3d-tutorial-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 0.9rem;
+  color: #5d4037;
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+
+.game3d-tutorial-step.active {
+  opacity: 1;
+}
+
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff8fab, #ff6b9d);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.game3d-tutorial-tip {
+  background: rgba(255, 143, 171, 0.15);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #8b4513;
+  margin-bottom: 16px;
+}
+
+/* ---------- 卡牌详情弹窗 ---------- */
+.game3d-card-detail {
+  position: absolute;
+  bottom: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(255, 249, 240, 0.98), rgba(255, 245, 230, 0.98));
+  border-radius: 16px;
+  padding: 14px 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 0 0 2px rgba(255, 215, 0, 0.4);
+  z-index: 50;
+  max-width: 320px;
+  text-align: center;
+  animation: cardDetailIn 0.2s ease-out;
+  pointer-events: none;
+}
+
+@keyframes cardDetailIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.game3d-card-detail-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #8b4513;
+  margin-bottom: 4px;
+}
+
+.game3d-card-detail-cat {
+  font-size: 0.75rem;
+  color: #ff8fab;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.game3d-card-detail-desc {
+  font-size: 0.85rem;
+  color: #5d4037;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.game3d-card-detail-cost {
+  font-size: 0.8rem;
+  color: #8b6914;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.game3d-card-detail-hint {
+  font-size: 0.7rem;
+  color: #a09080;
+  font-style: italic;
+}
+
+/* ---------- 屏幕效果反馈 ---------- */
+.game3d-screen-effect {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  animation: screenEffectFade 0.5s ease-out forwards;
+}
+
+.game3d-effect-damage {
+  background: radial-gradient(circle, transparent 40%, rgba(255, 50, 50, 0.35) 100%);
+  animation: damageShake 0.4s ease-out;
+}
+
+.game3d-effect-heal {
+  background: radial-gradient(circle, rgba(100, 255, 150, 0.25) 0%, transparent 70%);
+}
+
+.game3d-effect-friendship {
+  background: radial-gradient(circle, rgba(255, 150, 200, 0.3) 0%, transparent 70%);
+}
+
+@keyframes screenEffectFade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes damageShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
 }
 
 /* ---------- 触摸设备优化 ---------- */
