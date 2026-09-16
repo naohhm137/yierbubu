@@ -1,9 +1,11 @@
-import { useRef, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Character } from '@yierbubu/shared';
 import { Figurine } from './Figurine';
+import { StudioModel } from './StudioModel';
+import { ErrorBoundary } from '../ErrorBoundary';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 interface Character3DProps {
@@ -33,8 +35,14 @@ export function Character3D({
   });
   return <group position={position} rotation={rotation}
     onPointerDown={() => setPressed(true)} onPointerUp={() => setPressed(false)} onPointerLeave={() => setPressed(false)}>
-    <group ref={figure}><Figurine characterId={character?.id}/></group>
-    {playerName && <Html center position={[0,1.58,0]} style={{pointerEvents:'none',whiteSpace:'nowrap'}}>
+    <group ref={figure}>
+      <ErrorBoundary key={character?.id} fallback={<Figurine characterId={character?.id} />}>
+        <Suspense fallback={<Figurine characterId={character?.id} />}>
+          <StudioModel characterId={character?.id ?? 'bubu'} />
+        </Suspense>
+      </ErrorBoundary>
+    </group>
+    {playerName && <Html center position={[0,1.85,0]} style={{pointerEvents:'none',whiteSpace:'nowrap'}}>
       <div style={{padding:'5px 9px',borderRadius:10,background:isActive?'#493b31':'#fffcf4',color:isActive?'#fff9ec':'#493b31',fontFamily:'system-ui, sans-serif',fontSize:12,boxShadow:'0 2px 8px #493b3120',textAlign:'center',border:isTargetable?'2px solid #5d886c':'1px solid #bfa78d'}}>
         <strong>{playerName}</strong>
         <div style={{fontSize:10,marginTop:2}}>活力 {vitality} · 友情 {friendship}{isDreaming ? ' · 梦境中' : ''}</div>

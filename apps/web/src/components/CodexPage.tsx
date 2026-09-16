@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useGame } from '../GameContext.js';
 import { categoryName, type Character, type Card } from '@yierbubu/shared';
 import { ErrorBoundary } from './ErrorBoundary.js';
@@ -10,6 +10,13 @@ export function CodexPage() {
   const [tab, setTab] = useState<'characters' | 'cards'>('characters');
   const [selectedChar, setSelectedChar] = useState<Character | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+
+  useEffect(() => {
+    if (!selectedChar && !selectedCard) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { setSelectedChar(null); setSelectedCard(null); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedChar, selectedCard]);
 
   return (
     <div className="info-screen">
@@ -65,7 +72,7 @@ export function CodexPage() {
       {/* 角色详情 */}
       {selectedChar && (
         <div className="target-overlay" onClick={() => setSelectedChar(null)}>
-          <div className="target-panel" role="dialog" aria-modal="true" aria-labelledby="character-detail-name" style={{ maxWidth: 450, maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="target-panel" role="dialog" aria-modal="true" aria-labelledby="character-detail-name" style={{ width: 'min(980px, calc(100vw - 32px))', maxWidth: 980, maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <ErrorBoundary key={selectedChar.id} fallback={<div style={{ height: 260, display: 'grid', placeItems: 'center', background: '#faf5ed', borderRadius: 20 }}><img src={selectedChar.avatar} alt={selectedChar.name} style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: 'var(--shadow-md)' }} /></div>}>
               <Suspense fallback={<div style={{ height: 260, display: 'grid', placeItems: 'center', background: '#faf5ed', borderRadius: 20 }}><img src={selectedChar.avatar} alt={selectedChar.name} style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: 'var(--shadow-md)' }} /></div>}>
                 <CharacterPreview characterId={selectedChar.id} />

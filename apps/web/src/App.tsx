@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { GameProvider, useGame } from './GameContext.js';
 import { MainMenu } from './components/MainMenu.js';
 import { Lobby } from './components/Lobby.js';
-import { GameTable3D } from './components/GameTable3D.js';
+import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { ResultScreen } from './components/ResultScreen.js';
 import { RulesPage } from './components/RulesPage.js';
 import { CodexPage } from './components/CodexPage.js';
 import './styles.css';
+
+const GameTable3D = lazy(() => import('./components/GameTable3D.js').then(module => ({ default: module.GameTable3D })));
 
 function Background() {
   const elements = ['⭐', '☁️', '🎀', '✨', '🍬', '🌈', '💫', '🎈'];
@@ -45,7 +47,7 @@ function AppContent() {
       </div>
       {screen === 'menu' && <MainMenu />}
       {screen === 'lobby' && <Lobby />}
-      {screen === 'game' && <GameTable3D />}
+      {screen === 'game' && <ErrorBoundary><Suspense fallback={<div role="status" style={{ display: 'grid', minHeight: '100dvh', placeItems: 'center', color: '#493b31', background: '#f6eddf' }}>正在进入游戏桌面…</div>}><GameTable3D /></Suspense></ErrorBoundary>}
       {screen === 'result' && <ResultScreen />}
       {screen === 'rules' && <RulesPage />}
       {screen === 'codex' && <CodexPage />}
