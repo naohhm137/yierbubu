@@ -34,6 +34,8 @@ const gameSource=(await readRemote(`/assets/${gameChunk}`)).bytes.toString();
 assert.ok(main.includes('先练习一局'));
 assert.ok(gameSource.includes('每回合只选一次主要行动'));
 assert.ok(gameSource.includes('模型仍在加载'));
+assert.ok(!main.includes('http://localhost:3001'),'latest same-origin socket fix not deployed');
+console.log(JSON.stringify({stage:'assets-and-source-verified',entry,gameChunk}));
 const entryMatchesLocal=entry===localIndex.match(/src="([^"]+\.js)"/)?.[1];
 const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true,args:ip?[`--host-resolver-rules=MAP ${new URL(base).hostname} ${ip}`,'--disable-http2']:[]});
 const views=[];
@@ -55,7 +57,7 @@ try {
   assert.ok(socketUrls.some(url=>new URL(url).host===new URL(base).host),'production socket must use the served origin');
   await page.getByRole('button',{name:'先练习一局'}).click();
   try {await page.locator('.game3d-container').waitFor({timeout:60000});} catch(error) {console.log(JSON.stringify({body:await page.locator('body').innerText(),errors,pending:[...pending]}));await page.screenshot({path:`${out}/online-practice-failure.png`});throw error;}
-  await page.locator('.game3d-loading').waitFor({state:'hidden',timeout:45000});
+  try {await page.locator('.game3d-loading').waitFor({state:'hidden',timeout:60000});} catch(error) {console.log(JSON.stringify({body:await page.locator('body').innerText(),errors,pending:[...pending]}));await page.screenshot({path:`${out}/online-loading-failure.png`});throw error;}
   await page.getByRole('button',{name:'防守',exact:false}).click();
   await page.waitForFunction(()=>document.querySelector('.game3d-btn-hoard')?.disabled===true);
   assert.equal(await page.getByRole('button',{name:'结束回合',exact:false}).isEnabled(),true);

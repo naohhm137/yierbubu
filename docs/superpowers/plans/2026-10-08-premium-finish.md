@@ -59,5 +59,5 @@
 
 - [x] Independent review of final diff and tests, record any unresolved findings.
 - [x] Run combined tests, seeded simulations, GLB contract, web/server builds and whitespace checks.
-- [ ] Commit only approved files, publish using established GitHub/Render workflow if connectivity allows.
-- [ ] Verify target SHA deployment, health, models and playable session; save dated acceptance report and exact remaining gaps.
+- [x] Commit only approved files, publish using established GitHub/Render workflow if connectivity allows.
+- [x] Verify deployed code markers, health, asset hashes and playable session; save dated acceptance report, including unavailable independent Render SHA and network/truthful scope limitations.

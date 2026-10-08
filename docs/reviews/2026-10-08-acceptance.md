@@ -30,11 +30,23 @@
 
 - GitHub 已确认 `codex/premium-20261008` 和 `main` 指向发布提交 `2a0d8c8cbd79e0995f563b322de7dff94c364146`，主分支从 `cb5e07c` 普通前进。
 - 本地发布包：`../yier-bubu-release-2a0d8c8.zip`，94,561,400 bytes，SHA-256 `44aa04bc341fae26e98f959ddbc32cf922f71e233aa4c3ea2ee285b69d00c67f`。包含已提交源码、Blender 文件、网页资产和本地验收记录，不包含 node_modules 与本机未提交备份。
-- Render 公网文件与对局验收仍待本次自动部署完成。
+- 后续生产连接修复提交 `23ef824` 已推送 main，公网已出现相应同源连接代码。
 
 ### 生产连接回归
 
 最初本地静态文件检查仍连接 localhost:3001 的开发服务器。新增断言要求 WebSocket 与页面同源后，旧代码明确失败；客户端现改为页面同源连接，开发由 Vite 代理，生产由同一服务处理。重新构建和真实 3002 桌面/手机检查通过，实际 WebSocket 端口与静态页面一致。
+
+### 公网验收结果
+
+2026-10-08 15:38:42 UTC，`https://yierbubu.onrender.com` 健康接口正常。双熊、茶桌 GLB 与封面文件 SHA-256 全部与本地交付资产一致。公网入口 `/assets/index-BnkB0aiq.js`，游戏模块 `GameTable3D-BSx803fd.js`；已检查主要行动教程、真实加载说明及最新同源 Socket 修复标记。
+
+桌面与手机都通过练习局进入、完整 3D 加载、防守行动、禁用积蓄、允许结束回合的检查，无页面错误和横向溢出。两端 WebSocket 都直连 `wss://yierbubu.onrender.com/socket.io/`。截图与 JSON 保存于 `online-desktop.png`、`online-mobile.png`、`online-release.json`。
+
+检查环境的 GitHub/Render 网络出现过连接重置、下载暂停和超时。该轮浏览器 HTTP 资源使用 Node HTTPS 实际读取同一公网文件并转发（每端 17 个资源），游戏 WebSocket 保持远程直连。这证明公网资产与远程游戏流程可用，**不证明普通直连下载速度或所有地区网络稳定性**。一次备用节点检查超时，换回已验证节点后完整通过。
+
+Render 构建的 JS 文件名与 Windows 本地构建不同；验收基于模型/封面内容指纹、当前运行代码标记和真实交互，而非把入口文件名相同当作必要条件。未通过 Render API 获取运行提交 SHA，不宣称对精确运行 SHA 的独立证实。已推送 GitHub 运行代码为 `23ef824`，该修复确实出现在公网代码中。
+
+最终交接说明见根目录 `DEPLOYMENT_HANDOFF.md`；最新发布压缩包保存为项目上一层 `yier-bubu-release-20261008.zip`，包含最终提交的源码、Blender 文件、资产和验收证据。
 
 ## 已知边界
 
