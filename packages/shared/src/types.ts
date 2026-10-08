@@ -213,6 +213,8 @@ export interface RoomState {
     playerCount: number;
   };
   logCounter: number;
+  rngState?: number;              // 服务端保存的本房间随机状态（不进入公共视图）
+  skillRedirects?: Record<string, string>; // 团团待触发的一次互动牌重定向
 }
 
 // ---------- 胜利结算 ----------

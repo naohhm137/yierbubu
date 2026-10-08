@@ -307,14 +307,13 @@
   cursor: not-allowed;
 }
 
-.game3d-btn-draw { background: #81d4fa; color: #01579b; }
-.game3d-btn-skill { background: #ce93d8; color: #4a148c; }
-.game3d-btn-gift { background: #ffab91; color: #bf360c; }
-.game3d-btn-exchange { background: #a5d6a7; color: #1b5e20; }
-.game3d-btn-defend { background: #90caf9; color: #0d47a1; }
-.game3d-btn-hoard { background: #fff59d; color: #f57f17; }
-.game3d-btn-dream { background: #b39ddb; color: #311b92; }
-.game3d-btn-end { background: #ff8a65; color: #bf360c; font-weight: 700; }
+.game3d-btn-draw, .game3d-btn-gift, .game3d-btn-exchange,
+.game3d-btn-defend, .game3d-btn-hoard { background: #fffaf0; color: #493b31; border: 1px solid #cbb69a; }
+.game3d-btn-skill, .game3d-btn-dream { background: #dce5d3; color: #34563c; border: 1px solid #9fb595; }
+.game3d-btn-end { background: #655040; color: #fff9ec; font-weight: 700; border: 1px solid #655040; }
+.game3d-btn:focus-visible, .game3d-icon-btn:focus-visible { outline: 3px solid #567961; outline-offset: 3px; }
+.game3d-top-btns { display: flex; gap: 8px; margin-right: 94px; }
+.game3d-icon-btn { min-width: 42px; min-height: 42px; border-radius: 12px; border: 1px solid #cbb69a; background: #fffaf0; color: #493b31; font: inherit; cursor: pointer; }
 .game3d-btn-cancel { background: #e0e0e0; color: #616161; margin-top: 12px; }
 
 /* ---------- 目标选择浮层 ---------- */
@@ -878,6 +877,14 @@
   align-items: center;
   gap: 16px;
   animation: targetHintPulse 1.5s ease-in-out infinite;
+}
+
+.game3d-turn-banner .game3d-turn-banner-text {
+  background: #e8f0df;
+  color: #34563c;
+  box-shadow: 0 6px 18px #493b3122;
+  text-shadow: none;
+  border: 1px solid #9fb595;
 }
 
 .game3d-hand { position:absolute; z-index:12; bottom:110px; left:50%; transform:translateX(-50%); display:flex; gap:8px; width:max-content; max-width:calc(100% - 32px); overflow-x:auto; padding:8px 4px; }

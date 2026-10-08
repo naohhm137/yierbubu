@@ -64,18 +64,32 @@ export class RoomManager {
   leaveRoom(roomId: string, playerId: string) {
     const room = this.rooms.get(roomId);
     if (!room) return;
+    const departing = room.players.find((p) => p.id === playerId);
+    if (!departing) return;
+    if (room.phase !== 'lobby') {
+      departing.isBot = true;
+      if (room.hostId === playerId) room.hostId = room.players.find((p) => !p.isBot)?.id || '';
+      if (!room.players.some((p) => !p.isBot)) {
+        this.rooms.delete(roomId);
+        this.stopBotTimer(roomId);
+      } else if (room.phase === 'playing' && room.activePlayerId === playerId) {
+        this.scheduleBot(roomId);
+      }
+      return;
+    }
     room.players = room.players.filter((p) => p.id !== playerId);
-    if (room.players.length === 0) {
+    if (!room.players.some((p) => !p.isBot)) {
       this.rooms.delete(roomId);
       this.stopBotTimer(roomId);
     } else if (room.hostId === playerId) {
-      room.hostId = room.players[0].id;
+      room.hostId = room.players.find((p) => !p.isBot)?.id || '';
     }
   }
 
-  fillBots(roomId: string, count: number): RoomState | null {
+  fillBots(roomId: string, count: number, requesterId?: string): RoomState | null {
     const room = this.rooms.get(roomId);
     if (!room || room.phase !== 'lobby') return null;
+    if (!requesterId || room.hostId !== requesterId || !Number.isInteger(count) || count < 1 || count > 8) return null;
     const existingBots = room.players.filter((p) => p.isBot).length;
 
     // 获取已被选择的角色ID
@@ -104,9 +118,10 @@ export class RoomManager {
     return room;
   }
 
-  removeBot(roomId: string, botId: string): RoomState | null {
+  removeBot(roomId: string, botId: string, requesterId?: string): RoomState | null {
     const room = this.rooms.get(roomId);
     if (!room || room.phase !== 'lobby') return null;
+    if (!requesterId || room.hostId !== requesterId) return null;
     room.players = room.players.filter((p) => p.id !== botId || !p.isBot);
     return room;
   }
@@ -116,6 +131,15 @@ export class RoomManager {
     if (!room) return null;
     const p = room.players.find((pl) => pl.id === playerId);
     if (p) p.ready = ready;
+    return room;
+  }
+
+  selectCharacter(roomId: string, playerId: string, characterId: string): RoomState | null {
+    const room = this.rooms.get(roomId);
+    if (!room || room.phase !== 'lobby' || !CHARACTERS.some((c) => c.id === characterId)) return null;
+    const player = room.players.find((p) => p.id === playerId && !p.isBot);
+    if (!player || room.players.some((p) => p.id !== playerId && p.characterId === characterId)) return null;
+    player.characterId = characterId;
     return room;
   }
 
@@ -155,9 +179,10 @@ export class RoomManager {
     return result;
   }
 
-  restart(roomId: string): RoomState | null {
+  restart(roomId: string, requesterId?: string): RoomState | null {
     const room = this.rooms.get(roomId);
-    if (!room) return null;
+    if (!room || !requesterId || room.hostId !== requesterId || room.players.length < 4) return null;
+    this.stopBotTimer(roomId);
     const players = room.players.map((p) => ({
       id: p.id, name: p.name, isBot: p.isBot, characterId: p.characterId || undefined,
     }));

@@ -1,4 +1,4 @@
-import { Suspense, useRef, useState } from 'react';
+import { Suspense, useRef, useState, useEffect, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -18,11 +18,17 @@ interface Character3DProps {
   isActive?: boolean;
   isDreaming?: boolean;
   isTargetable?: boolean;
+  onReady?: () => void;
+}
+
+function FigureReady({ onReady, children }: { onReady?: () => void; children: ReactNode }) {
+  useEffect(() => { onReady?.(); }, [onReady]);
+  return <>{children}</>;
 }
 
 export function Character3D({
   character, position, rotation, playerName, vitality = 4, friendship = 0,
-  isActive = false, isDreaming = false, isTargetable = false,
+  isActive = false, isDreaming = false, isTargetable = false, onReady,
 }: Character3DProps) {
   const figure = useRef<THREE.Group>(null);
   const [pressed, setPressed] = useState(false);
@@ -36,9 +42,9 @@ export function Character3D({
   return <group position={position} rotation={rotation}
     onPointerDown={() => setPressed(true)} onPointerUp={() => setPressed(false)} onPointerLeave={() => setPressed(false)}>
     <group ref={figure}>
-      <ErrorBoundary key={character?.id} fallback={<Figurine characterId={character?.id} />}>
+      <ErrorBoundary key={character?.id} fallback={<FigureReady onReady={onReady}><Figurine characterId={character?.id} /></FigureReady>}>
         <Suspense fallback={<Figurine characterId={character?.id} />}>
-          <StudioModel characterId={character?.id ?? 'bubu'} />
+          <FigureReady onReady={onReady}><StudioModel characterId={character?.id ?? 'bubu'} active={isActive} dreaming={isDreaming} /></FigureReady>
         </Suspense>
       </ErrorBoundary>
     </group>

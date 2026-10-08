@@ -1,11 +1,13 @@
-import React, { useRef, useMemo, Suspense, useState, useEffect } from 'react';
+import React, { useRef, useMemo, Suspense, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows, Float, OrbitControls } from '@react-three/drei';
+import { ContactShadows, Float, OrbitControls, useGLTF } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, SMAA } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import type { PublicRoomView, PrivatePlayerView, Card } from '@yierbubu/shared';
 import { CHARACTERS, CARDS, SCENES } from '@yierbubu/shared';
-import { TableScene } from './TableScene';
+import { TableScene, StudioSeat } from './TableScene';
+import { StudioLighting } from './StudioLighting';
+import { TABLE_SURFACE, CARD_SURFACE, SEAT_TOP } from './tableSpace';
 import { Character3D } from './Character3D';
 import { HandCards } from './HandCards';
 import { SceneCardDisplay } from './SceneCardDisplay';
@@ -22,8 +24,14 @@ interface GameCanvasProps {
   onEndTurn: () => void;
   onSelectTarget?: (playerId: string) => void;
   targetMode?: boolean;
+  targetPlayerIds?: string[];
   selectedCardId?: string | null;
   onReady?: () => void;
+}
+
+function SceneReady({ onReady }: { onReady?: () => void }) {
+  useEffect(() => { onReady?.(); }, [onReady]);
+  return null;
 }
 
 function useSeatPositions(count: number) {
@@ -69,7 +77,7 @@ function ResponsiveCamera() {
   useEffect(() => {
     const portrait = size.height > size.width * 1.15;
     const perspective = camera as THREE.PerspectiveCamera;
-    perspective.position.set(0, portrait ? 8.8 : 6.6, portrait ? 10.8 : 7.8);
+    perspective.position.set(0, portrait ? 12 : 6.6, portrait ? 16 : 7.8);
     perspective.fov = portrait ? 55 : 48;
     perspective.updateProjectionMatrix();
     perspective.lookAt(0, 0.7, 0);
@@ -158,7 +166,7 @@ function TableDecorations({ count = 5 }: { count?: number }) {
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2;
       const r = 1.1;
-      arr.push({ pos: [Math.cos(angle) * r, 0.78, Math.sin(angle) * r], color: colors[i % colors.length], type: i % 3 === 0 ? 'star' : 'gem', scale: 0.7 });
+      arr.push({ pos: [Math.cos(angle) * r, TABLE_SURFACE + .13, Math.sin(angle) * r], color: colors[i % colors.length], type: i % 3 === 0 ? 'star' : 'gem', scale: 0.7 });
     }
     return arr;
   }, [count]);
@@ -176,11 +184,16 @@ function TableDecorations({ count = 5 }: { count?: number }) {
   );
 }
 
-export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTurn, onSelectTarget, targetMode, selectedCardId, onReady }: GameCanvasProps) {
+export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTurn, onSelectTarget, targetMode, targetPlayerIds, selectedCardId, onReady }: GameCanvasProps) {
   const device = useDeviceQuality();
   const reduced = useReducedMotion();
   const [webglSupported] = useState(checkWebGL);
   const allPlayers = room.players;
+  const [tableReady, setTableReady] = useState(false);
+  const [readyFigures, setReadyFigures] = useState<Set<string>>(() => new Set());
+  const markTableReady = useCallback(() => setTableReady(true), []);
+  const markFigureReady = useCallback((id: string) => setReadyFigures(current => current.has(id) ? current : new Set([...current, id])), []);
+  useEffect(() => { if (tableReady && allPlayers.every(player => readyFigures.has(player.id))) onReady?.(); }, [tableReady, readyFigures, allPlayers, onReady]);
   const seats = useSeatPositions(allPlayers.length);
   const currentScene = room.sceneId ? SCENES.find((s) => s.id === room.sceneId) : null;
   const myIndex = allPlayers.findIndex((p) => p.id === privateView.playerId);
@@ -220,33 +233,29 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
           e.preventDefault();
           console.warn('WebGL context lost');
         });
-        // 通知父组件Canvas已创建
-        setTimeout(() => onReady?.(), 500);
       }}
     >
       <color attach="background" args={['#ece1cf']} />
       <ResponsiveCamera />
       <OrbitControls
+        makeDefault
         enablePan={false}
-        minDistance={7}
-        maxDistance={11}
+        minDistance={device.isPortrait ? 16 : 7}
+        maxDistance={device.isPortrait ? 26 : 11}
         minPolarAngle={Math.PI / 5}
         maxPolarAngle={Math.PI / 2.35}
-        target={[0, 0.9, 0]}
-        enableDamping
+        target={[0, device.isPortrait ? 0 : .9, 0]}
+        enableDamping={!reduced}
         dampingFactor={0.08}
         rotateSpeed={0.55}
         enableZoom={false}
       />
       <Suspense fallback={<LoadingFallback />}>
         {/* TableScene owns the seamless studio backdrop; avoid box-shaped fallback walls. */}
-        <ambientLight intensity={0.9} color="#fff9f0" />
-        <hemisphereLight args={['#fff6e8', '#c7b9a1', 1]} />
-        <directionalLight position={[4, 8, 4]} intensity={2} color="#fff9f0" castShadow={device.shadows} shadow-mapSize={[device.shadowMapSize, device.shadowMapSize]} shadow-bias={-0.0001} shadow-normalBias={.035} />
-        <pointLight position={[0, 4, 0]} intensity={0.5} color="#ffd4a3" distance={12} decay={2} />
-        <pointLight position={[-5, 3, -3]} intensity={0.3} color="#ffc4d6" distance={10} decay={2} />
+        <StudioLighting mobile={device.isMobile} shadows={device.shadows} />
 
         <TableScene />
+        <SceneReady onReady={markTableReady} />
         <TableDecorations count={decorCount} />
         {currentScene && <SceneCardDisplay scene={currentScene} />}
         <CenterCards room={room} />
@@ -258,15 +267,15 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
           const isMe = player.id === privateView.playerId;
           const handX = seat.x * 0.72;
           const handZ = seat.z * 0.72;
-          const charPos: [number, number, number] = [seat.x * 1.08, .48, seat.z * 1.08];
-          const isTargetable = !!targetMode && !isMe && player.status === 'active';
+          const charPos: [number, number, number] = [seat.x * 1.08, SEAT_TOP, seat.z * 1.08];
+          const isTargetable = !!targetMode && (targetPlayerIds ? targetPlayerIds.includes(player.id) : !isMe && player.status === 'active');
           return (
             <React.Fragment key={player.id}>
-              <mesh position={[charPos[0],.25,charPos[2]]} castShadow receiveShadow><cylinderGeometry args={[.39,.33,.48,32]}/><meshStandardMaterial color="#a67d5f" roughness={.8}/></mesh>
+              <StudioSeat position={[charPos[0], 0, charPos[2]]} />
               <group onClick={(e) => { if (isTargetable && onSelectTarget) { e.stopPropagation(); onSelectTarget(player.id); } }}>
-                <Character3D character={char} position={charPos} rotation={[0, seat.rotY, 0]} playerName={isMe ? `${player.name}(你)` : player.name} vitality={player.vitality} friendship={player.friendship} isActive={room.activePlayerId === player.id} isDreaming={player.status === 'dream'} isTargetable={isTargetable} />
+                <Character3D character={char} position={charPos} rotation={[0, seat.rotY, 0]} playerName={isMe ? `${player.name}(你)` : player.name} vitality={player.vitality} friendship={player.friendship} isActive={room.activePlayerId === player.id} isDreaming={player.status === 'dream'} isTargetable={isTargetable} onReady={() => markFigureReady(player.id)} />
               </group>
-              {!isMe && <PlayerHandBacks position={[handX, .78, handZ]} rotationY={seat.rotY} cardCount={player.handCount || 4} isActive={room.activePlayerId === player.id} />}
+              {!isMe && <PlayerHandBacks position={[handX, CARD_SURFACE, handZ]} rotationY={seat.rotY} cardCount={player.handCount ?? 0} isActive={room.activePlayerId === player.id} />}
             </React.Fragment>
           );
         })}

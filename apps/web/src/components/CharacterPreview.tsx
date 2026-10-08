@@ -1,12 +1,14 @@
 import { Suspense, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type RefObject } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { ContactShadows, OrbitControls } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { getCharacter } from '@yierbubu/shared';
 import { StudioModel } from './three/StudioModel.js';
 import { ErrorBoundary } from './ErrorBoundary.js';
 import { useReducedMotion } from '../hooks/useReducedMotion.js';
 import { useDeviceQuality } from '../hooks/useDeviceQuality.js';
+import { StudioLighting } from './three/StudioLighting';
+import * as THREE from 'three';
 
 type PreviewAction = 'left' | 'right' | 'up' | 'down' | 'in' | 'out' | 'reset';
 type PreviewStatus = 'loading' | 'ready' | 'failed';
@@ -55,8 +57,10 @@ function LoadedFigure({ characterId, mobile, onReady }: { characterId: string; m
   useEffect(onReady, [onReady]);
   return <>
     <StudioModel characterId={characterId} />
-    <ContactShadows key={characterId} position={[0, .003, 0]} scale={3.6}
-      opacity={.3} blur={2.6} far={2.2} resolution={mobile ? 128 : 256} frames={1} />
+    <mesh position={[0, -.04, 0]} receiveShadow>
+      <cylinderGeometry args={[1.1, 1.1, .075, 80]} />
+      <meshStandardMaterial color="#e8dfd0" roughness={.83} />
+    </mesh>
   </>;
 }
 
@@ -66,11 +70,7 @@ function PreviewScene({ characterId, controls, reduced, mobile, onReady, onFail 
 }) {
   return <>
     <color attach="background" args={['#f3e8dc']} />
-    <ambientLight intensity={1.15} color="#fff8ee" />
-    <hemisphereLight args={['#fffaf4', '#cdb9a2', 1.1]} />
-    <directionalLight position={[2.8, 4.5, 3.2]} intensity={2.2} color="#fff0dc" />
-    <directionalLight position={[-2.5, 2.2, 1.5]} intensity={.75} color="#d9e4f4" />
-    <directionalLight position={[-1, 3, -2]} intensity={1.15} color="#fff9ef" />
+    <StudioLighting mobile={mobile} shadows={!mobile} />
     <Suspense fallback={null}>
       <LoadedFigure characterId={characterId} mobile={mobile} onReady={onReady} />
     </Suspense>
@@ -129,10 +129,10 @@ function Preview({ characterId }: { characterId: string }) {
       background: '#f3e8dc', position: 'relative', outlineOffset: 4 }}>
     {status === 'failed' ? <StudioPortrait characterId={characterId} label={label} /> :
       <ErrorBoundary fallback={<PreviewUnavailable characterId={characterId} label={label} onFail={onFail} />}>
-        <Canvas camera={{ position: [0, 1.12, 3.4], fov: 34, near: .1, far: 20 }}
-          frameloop="demand" dpr={[1, isMobile ? 1.25 : 1.75]}
-          gl={{ antialias: !isMobile, alpha: false, powerPreference: 'low-power' }}
-          fallback={<PreviewUnavailable characterId={characterId} label={label} onFail={onFail} />}>
+        <Canvas shadows={isMobile ? false : { type: THREE.PCFShadowMap }} camera={{ position: [0, 1.12, 3.4], fov: 34, near: .1, far: 20 }}
+          frameloop={reduced ? 'demand' : 'always'} dpr={[1, isMobile ? 1.25 : 1.75]}
+          gl={{ antialias: !isMobile, alpha: false, powerPreference: 'low-power', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1 }}
+          fallback={<span>浏览器不支持三维预览，请使用最新版浏览器。</span>}>
           <PreviewScene characterId={characterId} controls={controls} reduced={reduced}
             mobile={isMobile} onReady={onReady} onFail={onFail} />
         </Canvas>

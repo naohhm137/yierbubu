@@ -5,7 +5,7 @@ import type { Character } from './types.js';
 // 一二、布布为绝对主角，其余 10 名为原创 Q 萌角色
 // ============================================================
 
-export const CHARACTERS: Character[] = [
+const BASE_CHARACTERS: Character[] = [
   // ---------- 双主角 ----------
   {
     id: 'yier',
@@ -347,6 +347,47 @@ export const CHARACTERS: Character[] = [
     },
   },
 ];
+
+// Protocol IDs remain stable; every appearance belongs to the double-bear cast.
+const THEMES: Record<string, Pick<Character, 'name' | 'title' | 'species' | 'background'>> = {
+  yier: { name: '一二', title: '奶油小熊', species: '白熊', background: '茶会还没开始，一二已经替朋友留好了位置。' },
+  bubu: { name: '布布', title: '暖心小熊', species: '棕熊', background: '布布带来了甜点，也带来让大家重新振作的办法。' },
+  duoduo: { name: '一二 · 邮差', title: '云朵来信', species: '白熊', background: '把一张好牌和一句问候，一起送到朋友手里。' },
+  tangtang: { name: '布布 · 厨师', title: '甜点时间', species: '棕熊', background: '围裙口袋里装着糖，茶会厨房里总留着一份热乎乎的点心。' },
+  asong: { name: '布布 · 侦探', title: '茶会谜题', species: '棕熊', background: '戴上小帽子，布布决定认真找出今天是谁藏起了心愿。' },
+  yueyue: { name: '一二 · 魔术师', title: '月光把戏', species: '白熊', background: '披风轻轻一扬，把朋友的小秘密藏进月光。' },
+  xiaoban: { name: '布布 · 工匠', title: '修补心愿', species: '棕熊', background: '小工具和旧物件，都能在布布手里变成新的惊喜。' },
+  mimi: { name: '一二 · 歌手', title: '为你唱歌', species: '白熊', background: '耳机里是熟悉的旋律，唱给坐在身边的每一位朋友。' },
+  qiaoqiao: { name: '一二 · 睡衣', title: '晚安好梦', species: '白熊', background: '睡帽软乎乎的，困了也不忘替大家撑起一小片安全的梦。' },
+  tuantuan: { name: '布布 · 团子', title: '软软守护', species: '棕熊', background: '穿上团子帽，布布准备接住茶会里突如其来的小意外。' },
+  huahua: { name: '一二 · 画家', title: '把你画进梦里', species: '白熊', background: '画笔上有花园的颜色，旧牌也能画出新的故事。' },
+  kaka: { name: '布布 · 守护者', title: '我在你身边', species: '棕熊', background: '戴好工作帽，布布把最结实的保护留给朋友。' },
+};
+
+const SKILL_COPY: Record<string, Partial<Character['skill']>> = {
+  yier: { effect: '私下查看目标的一张随机手牌，再查看牌堆顶一张。其他玩家看不到这些内容。', timing: '你的回合内', failure: '目标没有手牌时，仅查看牌堆顶' },
+  bubu: { effect: '消耗 1 点友情：指定伙伴获得 1 层护盾并抽 1 张；不指定目标则自己抽 2 张。', timing: '你的回合内', target: '可选一名活跃玩家', failure: '友情不足时不会消耗技能次数' },
+  duoduo: { effect: '随机赠送自己的一张手牌给另一名活跃玩家，双方各获得 1 点友情。', target: '另一名活跃玩家' },
+  tangtang: { effect: '随机弃置一张手牌，为目标恢复 1 点活力；弃置友情牌时恢复 2 点。' },
+  asong: { effect: '查看目标最近打出的牌；没有记录时，私下查看其一张随机手牌。', failure: '目标没有记录且没有手牌时无法使用' },
+  yueyue: { effect: '隐藏尚未进行主要行动的目标本轮出牌与技能公告。其他玩家仍能看到公开数值的变化。', target: '本轮尚未主要行动的一名活跃玩家' },
+  xiaoban: { effect: '从弃牌堆随机收回一张道具牌；没有道具牌时抽 1 张。', failure: '弃牌堆没有道具牌时抽 1 张' },
+  mimi: { effect: '自己两侧仍在场的伙伴各获得 1 点友情；一二或布布本体额外恢复 1 点活力。', target: '自动作用于左右邻座' },
+  qiaoqiao: { effect: '自己获得 1 层护盾。被动：每局首次没有护盾抵挡的伤害被免疫，并抽 1 张。', trigger: '主动每回合一次；被动每局一次', target: '自己', cooldown: '主动每回合一次', failure: '护盾不影响每局一次的被动次数' },
+  tuantuan: { effect: '指定一名活跃玩家，准备把下一张互动牌的目标转向该玩家。', target: '一名活跃玩家', failure: '未指定有效目标时无法使用' },
+  huahua: { effect: '取回弃牌堆顶的一张牌；弃牌堆为空时抽 1 张。', target: '自动选择弃牌堆顶', failure: '弃牌堆为空时抽 1 张' },
+  kaka: { effect: '目标获得 2 层护盾，自己立即移到行动顺序末尾；本轮已行动的玩家不会重复获得回合。' },
+};
+
+export const CHARACTERS: Character[] = BASE_CHARACTERS.map(character => ({
+  ...character,
+  ...THEMES[character.id],
+  personality: ['yier', 'duoduo', 'yueyue', 'mimi', 'qiaoqiao', 'huahua'].includes(character.id)
+    ? '细心、好奇，把小小的温柔藏在每一次行动里。'
+    : '热情、可靠，愿意陪朋友一起把难题变成好故事。',
+  playStyle: '把角色技能与场景规则配合，每回合选择一次主要行动。',
+  skill: { ...character.skill, ...SKILL_COPY[character.id] },
+}));
 
 export const CHARACTER_MAP: Record<string, Character> = Object.fromEntries(
   CHARACTERS.map((c) => [c.id, c])

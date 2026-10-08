@@ -16,31 +16,41 @@ import { CONSTANTS } from './types.js';
 // 简易可种子化随机数（mulberry32）
 function makeRng(seed: number) {
   let a = seed >>> 0;
-  return () => {
+  const next = () => {
     a |= 0; a = (a + 0x6D2B79F5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+  next.getState = () => a >>> 0;
+  return next;
 }
 
 let rng = makeRng(Date.now() % 2147483647);
+
+function random(state?: RoomState) {
+  if (!state) return rng();
+  const generator = makeRng(state.rngState ?? rng.getState());
+  const value = generator();
+  state.rngState = generator.getState();
+  return value;
+}
 
 export function setSeed(seed: number) {
   rng = makeRng(seed);
 }
 
-function shuffle<T>(arr: T[]): T[] {
+function shuffle<T>(arr: T[], state?: RoomState): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
+    const j = Math.floor(random(state) * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(rng() * arr.length)];
+function pick<T>(arr: T[], state?: RoomState): T {
+  return arr[Math.floor(random(state) * arr.length)];
 }
 
 function clamp(v: number, min: number, max: number) {
@@ -85,7 +95,7 @@ function drawCards(state: RoomState, player: PlayerState, count: number): string
   for (let i = 0; i < count; i++) {
     if (state.deck.length === 0) {
       if (state.discard.length === 0) break;
-      state.deck = shuffle(state.discard);
+      state.deck = shuffle(state.discard, state);
       state.discard = [];
       addLog(state, 'system', '牌堆已空，弃牌堆洗回牌堆。');
     }
@@ -179,7 +189,7 @@ export function createGame(opts: CreateGameOptions): RoomState {
 
   const players: PlayerState[] = opts.players.map((p, idx) => {
     let charId = p.characterId;
-    if (!charId) {
+    if (!charId || !getCharacter(charId) || assignedChars.has(charId)) {
       charId = availableChars.find((c) => !assignedChars.has(c))!;
     }
     assignedChars.add(charId!);
@@ -244,6 +254,8 @@ export function createGame(opts: CreateGameOptions): RoomState {
     logCounter: 0,
   };
 
+  state.rngState = rng.getState();
+
   // 发起始手牌
   for (const p of players) {
     drawCards(state, p, CONSTANTS.BASE_HAND);
@@ -268,7 +280,7 @@ export function startRound(state: RoomState) {
 
   // 翻开场景牌
   if (state.sceneDeck.length === 0) {
-    state.sceneDeck = shuffle(SCENES.map((s) => s.id));
+    state.sceneDeck = shuffle(SCENES.map((s) => s.id), state);
   }
   state.sceneId = state.sceneDeck.pop()!;
   const scene = SCENE_MAP[state.sceneId];
@@ -276,7 +288,7 @@ export function startRound(state: RoomState) {
 
   // 梦幻迷宫：重新排列行动顺序
   if (state.sceneId === 'dream_maze') {
-    state.turnOrder = shuffle(state.turnOrder);
+    state.turnOrder = shuffle(state.turnOrder, state);
     addLog(state, 'scene', '梦幻迷宫：行动顺序已重新排列！');
   }
 
@@ -287,7 +299,7 @@ export function startRound(state: RoomState) {
     for (const pid of order) {
       const p = getPlayer(state, pid)!;
       if (p.hand.length > 0 && p.status === 'active') {
-        const cardId = p.hand[Math.floor(rng() * p.hand.length)];
+        const cardId = p.hand[Math.floor(random(state) * p.hand.length)];
         gifts[pid] = cardId;
         p.hand.splice(p.hand.indexOf(cardId), 1);
       }
@@ -332,7 +344,14 @@ export function startRound(state: RoomState) {
 export function endTurn(state: RoomState) {
   if (!state.activePlayerId) return;
   const current = getPlayer(state, state.activePlayerId);
-  if (current) current.hasActedThisTurn = true;
+  if (current) {
+    current.hasActedThisTurn = true;
+    const overflow = Math.max(0, current.hand.length - current.handLimit);
+    if (overflow > 0) {
+      state.discard.push(...current.hand.splice(0, overflow));
+      addLog(state, 'action', `${current.name} 手牌超出上限，自动将最早获得的 ${overflow} 张牌放入弃牌堆。`, current.id);
+    }
+  }
 
   // 找下一个 active 玩家
   const idx = state.turnOrder.indexOf(state.activePlayerId);
@@ -405,10 +424,16 @@ export function playerAction(
 
   const player = getPlayer(state, playerId);
   if (!player) return { ok: false, error: '玩家不存在' };
+  if (params.targetId !== undefined && !getPlayer(state, params.targetId)) {
+    return { ok: false, error: '目标不存在' };
+  }
 
   // 梦境旁观者只能 dreamHelp
   if (player.status === 'dream' && action !== 'dreamHelp') {
     return { ok: false, error: '你处于梦境旁观者状态，只能提供帮助' };
+  }
+  if (player.hasActedThisTurn && ['playCard', 'useSkill', 'gift', 'exchange', 'defend', 'hoard'].includes(action)) {
+    return { ok: false, error: '本回合已完成主行动，可以抽牌或结束回合' };
   }
 
   let result: { ok: boolean; error?: string };
@@ -456,6 +481,32 @@ function actionPlayCard(state: RoomState, player: PlayerState, cardId: string, t
   if (state.bannedCategory === card.category) {
     return { ok: false, error: `本轮禁止使用${categoryName(card.category)}` };
   }
+  const targetedEffects = card.effects.filter((effect) => effect.target === 'other' || effect.target === 'any');
+  if (targetedEffects.length > 0) {
+    const target = targetId ? getPlayer(state, targetId) : undefined;
+    if (!target) return { ok: false, error: '这张牌需要指定目标' };
+    if (targetedEffects.some((effect) => effect.target === 'other') && target.id === player.id) return { ok: false, error: '这张牌需要指定其他玩家' };
+    if (targetedEffects.some((effect) => effect.type === 'revive')) {
+      if (target.status !== 'dream') return { ok: false, error: '复活牌需要指定梦境玩家' };
+    } else if (target.status !== 'active') {
+      return { ok: false, error: '这张牌需要指定行动中的玩家' };
+    }
+  }
+  if (card.id === 'F01' && player.hand.length < 2) return { ok: false, error: '需要另一张手牌用于分享' };
+  if (card.id === 'F06' && player.friendship < 1) return { ok: false, error: '至少需要 1 点友情' };
+  const armed = state.skillRedirects;
+  let redirectCaster: string | undefined;
+  if (card.category === 'interact' && targetedEffects.length > 0 && targetId) {
+    for (const [casterId, redirectedId] of Object.entries(armed || {})) {
+      if (getPlayer(state, casterId)?.status === 'active' && getPlayer(state, redirectedId)?.status === 'active') {
+        redirectCaster = casterId;
+        targetId = redirectedId;
+        break;
+      }
+    }
+  }
+  const finalTarget = targetId ? getPlayer(state, targetId) : undefined;
+  if (card.id === 'I22' && finalTarget?.hasActedThisTurn) return { ok: false, error: '目标本轮已完成主行动' };
 
   // 云朵暴雨：不能连续指定同一人
   if (targetId && state.sceneId === 'cloud_rain' && state.lastTargetPlayerId === targetId && targetId !== player.id) {
@@ -471,6 +522,10 @@ function actionPlayCard(state: RoomState, player: PlayerState, cardId: string, t
   }
 
   // 打出
+  if (redirectCaster) {
+    delete armed![redirectCaster];
+    addLog(state, 'skill', `${getPlayer(state, redirectCaster)!.name} 将这张互动牌重定向给了 ${getPlayer(state, targetId!)!.name}。`, redirectCaster);
+  }
   discardCard(state, player, cardId);
   player.lastPlayedCard = cardId;
   player.hasActedThisTurn = true;
@@ -484,7 +539,7 @@ function actionPlayCard(state: RoomState, player: PlayerState, cardId: string, t
   if (targetId) state.lastTargetPlayerId = targetId;
 
   // 心愿流星：第一个帮助他人的玩家获得碎片
-  if (state.sceneId === 'wish_meteor' && !state.meteorClaimed && isHelpingAction(card, targetId)) {
+  if (state.sceneId === 'wish_meteor' && !state.meteorClaimed && isHelpingAction(card, targetId, player.id)) {
     state.meteorClaimed = true;
     player.wishFragments++;
     state.wishFragments++;
@@ -495,10 +550,10 @@ function actionPlayCard(state: RoomState, player: PlayerState, cardId: string, t
   return { ok: true };
 }
 
-function isHelpingAction(card: Card, targetId?: string): boolean {
-  if (!targetId) return false;
+function isHelpingAction(card: Card, targetId?: string, playerId?: string): boolean {
   return card.effects.some((e) =>
-    e.type === 'heal' || e.type === 'shield' || e.type === 'gainFriendship' || e.type === 'revive' || e.type === 'formBond'
+    (e.target === 'all' || ((e.target === 'other' || e.target === 'any') && !!targetId && targetId !== playerId)) &&
+    (e.type === 'revive' || e.type === 'formBond' || (['heal', 'shield', 'gainFriendship'].includes(e.type) && (e.value || 0) > 0))
   );
 }
 
@@ -509,6 +564,14 @@ function actionUseSkill(state: RoomState, player: PlayerState, targetId?: string
 
   // 星光舞台：第一次技能免费
   const skillFree = state.sceneId === 'star_stage' && !state.starStageSkillFree[player.id];
+  const target = targetId ? getPlayer(state, targetId) : undefined;
+  const code = char.skill.code || '';
+  if (code === 'bubu_burst' && !skillFree && player.friendship < 1) return { ok: false, error: '友情值不足' };
+  if (['cloud_mail', 'candy_chef', 'forest_detective', 'moon_magician', 'windup_knight', 'naughty_dumpling'].includes(code) && (!target || target.status !== 'active')) return { ok: false, error: '技能需要有效的行动中目标' };
+  if (['cloud_mail', 'candy_chef'].includes(code) && player.hand.length === 0) return { ok: false, error: '技能需要手牌' };
+  if (code === 'cloud_mail' && target?.id === player.id) return { ok: false, error: '请选择其他玩家' };
+  if (code === 'forest_detective' && target && !target.lastPlayedCard && target.hand.length === 0) return { ok: false, error: '目标没有可追踪信息' };
+  if (code === 'moon_magician' && target?.hasActedThisTurn) return { ok: false, error: '目标本轮已完成主行动' };
   if (skillFree) {
     state.starStageSkillFree[player.id] = true;
   }
@@ -567,7 +630,7 @@ function actionExchange(state: RoomState, player: PlayerState, cardId: string, t
   }
 
   const playerIndex = player.hand.indexOf(cardId);
-  const targetIndex = Math.floor(rng() * target.hand.length);
+  const targetIndex = Math.floor(random(state) * target.hand.length);
   const targetCard = target.hand[targetIndex];
   player.hand[playerIndex] = targetCard;
   target.hand[targetIndex] = cardId;
@@ -612,9 +675,15 @@ function actionDreamHelp(state: RoomState, player: PlayerState, targetId: string
 // ---------- 卡牌效果执行 ----------
 
 function applyCardEffects(state: RoomState, player: PlayerState, card: Card, targetId?: string) {
-  const target = targetId ? getPlayer(state, targetId) : undefined;
+  const selectedTarget = targetId ? getPlayer(state, targetId) : undefined;
+  if (card.id === 'F01' && selectedTarget) {
+    const gift = player.hand[Math.floor(random(state) * player.hand.length)];
+    transferCard(player, selectedTarget, gift);
+    addLog(state, 'action', `${player.name} 分享了一张手牌给 ${selectedTarget.name}。`, player.id);
+  }
 
   for (const effect of card.effects) {
+    const target = effect.target === 'self' ? player : selectedTarget;
     const value = effect.value || 0;
     switch (effect.type) {
       case 'damage': {
@@ -625,7 +694,7 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
         if (state.sceneId === 'toy_rampage' && card.category === 'item') dmg += 1;
         if (target) damagePlayer(state, target, dmg, player.id);
         // 玩具暴走副作用
-        if (state.sceneId === 'toy_rampage' && card.category === 'item' && rng() < 0.25) {
+        if (state.sceneId === 'toy_rampage' && card.category === 'item' && random(state) < 0.25) {
           damagePlayer(state, player, 1);
           addLog(state, 'scene', `玩具暴走副作用！${player.name} 受到 1 点伤害。`, player.id);
         }
@@ -633,6 +702,7 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
       }
       case 'heal': {
         let heal = value;
+        if (card.id === 'F06') { heal = player.friendship; player.friendship = 0; }
         if (state.sceneId === 'quiet_afternoon') heal += 1;
         if (effect.target === 'all') {
           for (const p of activePlayers(state)) healPlayer(p, heal);
@@ -659,21 +729,29 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
           player.shield += shield;
           addLog(state, 'action', `${player.name} 获得 ${shield} 层护盾。`, player.id);
         }
-        if (state.sceneId === 'toy_rampage' && card.category === 'item' && rng() < 0.25) {
-          addLog(state, 'scene', `玩具暴走副作用！${player.name} 下回合行动延后。`, player.id);
+        if (state.sceneId === 'toy_rampage' && card.category === 'item' && random(state) < 0.25) {
+          state.turnOrder = [...state.turnOrder.filter((id) => id !== player.id), player.id];
+          addLog(state, 'scene', `玩具暴走副作用！${player.name} 立即移到行动顺序末尾。`, player.id);
         }
         break;
       }
       case 'draw': {
+        if (card.id === 'F07') {
+          const recipients = state.players.filter((p) => p.id === player.id || (player.bonds.includes(p.id) && p.status === 'active'));
+          for (const recipient of recipients) drawCards(state, recipient, value);
+          addLog(state, 'action', `${player.name} 与 ${recipients.length - 1} 名羁绊伙伴各摸了 ${value} 张牌。`, player.id);
+          break;
+        }
         if (effect.target === 'all') {
           for (const p of activePlayers(state)) drawCards(state, p, value);
           addLog(state, 'action', `全队各摸 ${value} 张牌。`, player.id);
         } else {
-          drawCards(state, player, value);
-          addLog(state, 'action', `${player.name} 摸了 ${value} 张牌。`, player.id, [player.id]);
+          const recipient = target || player;
+          drawCards(state, recipient, value);
+          addLog(state, 'action', `${recipient.name} 摸了 ${value} 张牌。`, player.id);
         }
-        if (state.sceneId === 'toy_rampage' && card.category === 'item' && rng() < 0.25 && player.hand.length > 0) {
-          const rc = player.hand[Math.floor(rng() * player.hand.length)];
+        if (state.sceneId === 'toy_rampage' && card.category === 'item' && random(state) < 0.25 && player.hand.length > 0) {
+          const rc = player.hand[Math.floor(random(state) * player.hand.length)];
           discardCard(state, player, rc);
           addLog(state, 'scene', `玩具暴走副作用！${player.name} 随机弃了 1 张牌。`, player.id);
         }
@@ -681,7 +759,7 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
       }
       case 'discard': {
         if (target && target.hand.length > 0) {
-          const rc = target.hand[Math.floor(rng() * target.hand.length)];
+          const rc = target.hand[Math.floor(random(state) * target.hand.length)];
           discardCard(state, target, rc);
           addLog(state, 'action', `${target.name} 弃了 1 张牌。`, player.id);
         }
@@ -697,7 +775,7 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
         } else {
           changeFriendship(player, value);
         }
-        if (state.sceneId === 'toy_rampage' && card.category === 'item' && rng() < 0.25) {
+        if (state.sceneId === 'toy_rampage' && card.category === 'item' && random(state) < 0.25) {
           changeFriendship(player, -1);
           addLog(state, 'scene', `玩具暴走副作用！${player.name} 友情 -1。`, player.id);
         }
@@ -721,16 +799,20 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
       }
       case 'peekHand': {
         if (target && target.hand.length > 0) {
-          const rc = target.hand[Math.floor(rng() * target.hand.length)];
-          const card = getCard(rc);
-          addLog(state, 'action', `${player.name} 查看了 ${target.name} 的一张手牌：「${card?.name}」。`, player.id, [target.id]);
+          const rc = target.hand[Math.floor(random(state) * target.hand.length)];
+          const revealed = getCard(rc);
+          addLog(state, 'action', `${player.name} 查看了 ${target.name} 的一张手牌：「${revealed?.name}」。`, player.id, card.id === 'I12' ? undefined : state.players.filter((p) => p.id !== player.id).map((p) => p.id));
+          if (card.id === 'I14' && player.hand.length > 0) {
+            const own = player.hand[Math.floor(random(state) * player.hand.length)];
+            addLog(state, 'action', `${target.name} 查看了 ${player.name} 的一张手牌：「${getCard(own)?.name}」。`, target.id, state.players.filter((p) => p.id !== target.id).map((p) => p.id));
+          }
         }
         break;
       }
       case 'swapCard': {
         if (target && target.hand.length > 0 && player.hand.length > 0) {
-          const pi = Math.floor(rng() * player.hand.length);
-          const ti = Math.floor(rng() * target.hand.length);
+          const pi = Math.floor(random(state) * player.hand.length);
+          const ti = Math.floor(random(state) * target.hand.length);
           const pc = player.hand[pi];
           const tc = target.hand[ti];
           player.hand[pi] = tc;
@@ -740,22 +822,32 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
         break;
       }
       case 'reorderTurn': {
-        state.turnOrder = shuffle(state.turnOrder);
+        if (card.id === 'I02' && target) {
+          const a = state.turnOrder.indexOf(player.id); const b = state.turnOrder.indexOf(target.id);
+          [state.turnOrder[a], state.turnOrder[b]] = [state.turnOrder[b], state.turnOrder[a]];
+        } else if (card.id === 'I17') state.turnOrder = [player.id, ...state.turnOrder.filter((id) => id !== player.id)];
+        else if (card.id === 'A03') state.turnOrder = [...state.turnOrder.filter((id) => id !== player.id), player.id];
+        else state.turnOrder = shuffle(state.turnOrder, state);
         addLog(state, 'action', `${player.name} 打乱了行动顺序！`, player.id);
         break;
       }
       case 'banCategory': {
         const cats: CardCategory[] = ['interact', 'guard', 'vitality', 'adventure', 'item', 'friendship'];
-        state.bannedCategory = pick(cats);
+        state.bannedCategory = pick(cats, state);
         addLog(state, 'action', `本轮禁止使用「${categoryName(state.bannedCategory)}」！`, player.id);
         break;
       }
       case 'recycle': {
-        if (state.discard.length > 0) {
-          const rc = state.discard.pop()!;
+        let index = -1;
+        for (let i = state.discard.length - 1; i >= 0; i--) {
+          const id = state.discard[i];
+          if (id !== card.id && (card.id !== 'A09' || getCard(id)?.category !== 'adventure')) { index = i; break; }
+        }
+        if (index >= 0) {
+          const [rc] = state.discard.splice(index, 1);
           player.hand.push(rc);
           addLog(state, 'action', `${player.name} 从弃牌堆取回了一张牌。`, player.id);
-        }
+        } else drawCards(state, player, 1);
         break;
       }
       case 'revive': {
@@ -765,15 +857,30 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
         break;
       }
       case 'modifyScene': {
+        const wasToyRampage = state.sceneId === 'toy_rampage';
         // 简化：心愿进度变化或场景效果切换
         if (card.id === 'T07' || card.id === 'F08' || card.id === 'I24') {
           const delta = card.id === 'I24' ? -1 : 1;
           state.wishProgress = clamp(state.wishProgress + delta, 0, CONSTANTS.WISH_GOAL + 2);
           addLog(state, 'action', `团队心愿进度 ${delta > 0 ? '+' : ''}${delta}（当前 ${state.wishProgress}/${CONSTANTS.WISH_GOAL}）。`, player.id);
-        } else {
-          addLog(state, 'action', `${player.name} 改变了场景效果！`, player.id);
+        } else if (card.id === 'I11' && target) {
+          state.skillRedirects ||= {}; state.skillRedirects[player.id] = target.id;
+          addLog(state, 'action', `${player.name} 准备将下一张指定玩家的互动牌转向 ${target.name}。`, player.id);
+        } else if (card.id === 'I22' && target) {
+          target.hiddenAction = true;
+          addLog(state, 'action', `${target.name} 本轮出牌与技能公告已隐藏。`, player.id);
+        } else if (card.id === 'T04') {
+          state.sceneId = pick(SCENES.filter((s) => s.id !== state.sceneId).map((s) => s.id), state);
+          addLog(state, 'scene', `${player.name} 切换了场景：${SCENE_MAP[state.sceneId].name}。本轮开始事件不会重复执行。`, player.id);
+        } else if (card.id === 'A10') {
+          for (let i = 0; i < 2; i++) {
+            const shown = state.deck.pop();
+            if (!shown) break;
+            state.discard.push(shown);
+            addLog(state, 'action', `望远镜展示牌堆顶：「${getCard(shown)?.name}」，随后放入弃牌堆。`, player.id);
+          }
         }
-        if (state.sceneId === 'toy_rampage' && card.category === 'item' && rng() < 0.25) {
+        if (wasToyRampage && card.category === 'item' && random(state) < 0.25) {
           state.wishProgress = clamp(state.wishProgress - 1, 0, CONSTANTS.WISH_GOAL + 2);
           addLog(state, 'scene', `玩具暴走副作用！心愿进度 -1。`, player.id);
         }
@@ -781,9 +888,9 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
       }
       case 'secretAid': {
         if (target) {
-          if (rng() < 0.5) {
+          if (random(state) < 0.5) {
             changeFriendship(target, 1);
-            addLog(state, 'action', `秘密行动：${target.name} 获得了帮助（+1 友情）。`, player.id, [player.id, target.id]);
+            addLog(state, 'action', `随机行动：${target.name} 获得了帮助（+1 友情）。`, player.id);
           } else {
             damagePlayer(state, target, 1, player.id);
           }
@@ -809,7 +916,7 @@ function applyCardEffects(state: RoomState, player: PlayerState, card: Card, tar
         break;
       }
       case 'randomEvent': {
-        if (target && rng() < 0.5) {
+        if (target && random(state) < 0.5) {
           damagePlayer(state, target, 1, player.id);
         } else {
           damagePlayer(state, player, 1, target?.id);
@@ -837,80 +944,80 @@ function applySkill(
   switch (char.skill.code) {
     case 'yier_insight': {
       if (target && target.hand.length > 0) {
-        const rc = target.hand[Math.floor(rng() * target.hand.length)];
+        const rc = target.hand[Math.floor(random(state) * target.hand.length)];
         const card = getCard(rc);
-        addLog(state, 'skill', `一二查看了 ${target.name} 的手牌：「${card?.name}」。`, player.id, [target.id]);
+        addLog(state, 'skill', `${char.name}查看了 ${target.name} 的手牌：「${card?.name}」。`, player.id, state.players.filter((p) => p.id !== player.id).map((p) => p.id));
       }
       if (state.deck.length > 0) {
         const top = state.deck[state.deck.length - 1];
-        addLog(state, 'skill', `一二看到牌堆顶是「${getCard(top)?.name}」。`, player.id, [player.id]);
+        addLog(state, 'skill', `${char.name}看到牌堆顶是「${getCard(top)?.name}」。`, player.id, state.players.filter((p) => p.id !== player.id).map((p) => p.id));
       }
       break;
     }
     case 'bubu_burst': {
       if (!skillFree && player.friendship < 1) {
-        addLog(state, 'skill', `布布友情值不足，技能未生效。`, player.id);
+        addLog(state, 'skill', `${char.name}友情值不足，技能未生效。`, player.id);
         return;
       }
       if (!skillFree) changeFriendship(player, -1);
       if (target) {
         target.shield += 1;
         drawCards(state, target, 1);
-        addLog(state, 'skill', `布布的友情爆发！${target.name} 获得 1 护盾并摸 1 张牌。`, player.id);
+        addLog(state, 'skill', `${char.name}的友情爆发！${target.name} 获得 1 护盾并摸 1 张牌。`, player.id);
       } else {
         drawCards(state, player, 2);
-        addLog(state, 'skill', `布布的友情爆发！自己摸了 2 张牌。`, player.id);
+        addLog(state, 'skill', `${char.name}的友情爆发！自己摸了 2 张牌。`, player.id);
       }
       break;
     }
     case 'cloud_mail': {
       if (target && player.hand.length > 0) {
-        const cardId = player.hand[Math.floor(rng() * player.hand.length)];
+        const cardId = player.hand[Math.floor(random(state) * player.hand.length)];
         transferCard(player, target, cardId);
         changeFriendship(player, 1);
         changeFriendship(target, 1);
-        addLog(state, 'skill', `朵朵将一张牌送给了 ${target.name}，双方 +1 友情。`, player.id);
+        addLog(state, 'skill', `${char.name}将一张牌送给了 ${target.name}，双方 +1 友情。`, player.id);
       }
       break;
     }
     case 'candy_chef': {
       if (player.hand.length > 0 && target) {
-        const cardId = player.hand[Math.floor(rng() * player.hand.length)];
+        const cardId = player.hand[Math.floor(random(state) * player.hand.length)];
         const discarded = getCard(cardId);
         discardCard(state, player, cardId);
         const bonus = discarded?.category === 'friendship' ? 1 : 0;
         healPlayer(target, 1 + bonus);
-        addLog(state, 'skill', `糖糖消耗「${discarded?.name}」为 ${target.name} 恢复 ${1 + bonus} 点活力。`, player.id);
+        addLog(state, 'skill', `${char.name}消耗「${discarded?.name}」为 ${target.name} 恢复 ${1 + bonus} 点活力。`, player.id);
       }
       break;
     }
     case 'forest_detective': {
       if (target && target.lastPlayedCard) {
         const card = getCard(target.lastPlayedCard);
-        addLog(state, 'skill', `阿松追踪到 ${target.name} 最近打出了「${card?.name}」。`, player.id);
+        addLog(state, 'skill', `${char.name}追踪到 ${target.name} 最近打出了「${card?.name}」。`, player.id);
       } else if (target && target.hand.length > 0) {
-        const rc = target.hand[Math.floor(rng() * target.hand.length)];
-        addLog(state, 'skill', `阿松查看了 ${target.name} 的一张手牌。`, player.id, [target.id]);
+        const rc = target.hand[Math.floor(random(state) * target.hand.length)];
+        addLog(state, 'skill', `${char.name}追踪手牌：「${getCard(rc)?.name}」。`, player.id, state.players.filter((p) => p.id !== player.id).map((p) => p.id));
       }
       break;
     }
     case 'moon_magician': {
       if (target) {
         target.hiddenAction = true;
-        addLog(state, 'skill', `月月让 ${target.name} 的行动隐藏了！`, player.id);
+        addLog(state, 'skill', `${char.name}让 ${target.name} 的行动隐藏了！`, player.id);
       }
       break;
     }
     case 'toy_repair': {
       const itemCards = state.discard.filter((id) => getCard(id)?.category === 'item');
       if (itemCards.length > 0) {
-        const rc = itemCards[Math.floor(rng() * itemCards.length)];
+        const rc = itemCards[Math.floor(random(state) * itemCards.length)];
         state.discard = state.discard.filter((id) => id !== rc);
         player.hand.push(rc);
-        addLog(state, 'skill', `小扳从弃牌堆修好了一张道具牌「${getCard(rc)?.name}」。`, player.id);
+        addLog(state, 'skill', `${char.name}从弃牌堆修好了一张道具牌「${getCard(rc)?.name}」。`, player.id);
       } else {
         drawCards(state, player, 1);
-        addLog(state, 'skill', `小扳没找到可修的道具，摸了 1 张牌。`, player.id);
+        addLog(state, 'skill', `${char.name}没找到可修的道具，摸了 1 张牌。`, player.id);
       }
       break;
     }
@@ -927,24 +1034,26 @@ function applySkill(
           }
         }
       }
-      addLog(state, 'skill', `咪咪的星光二重奏！相邻玩家各 +1 友情。`, player.id);
+      addLog(state, 'skill', `${char.name}的星光二重奏！相邻玩家各 +1 友情。`, player.id);
       break;
     }
     case 'timid_ghost': {
       // 被动技能，主动使用时获得 1 护盾
       player.shield += 1;
-      addLog(state, 'skill', `悄悄躲进兜帽，获得 1 层护盾。`, player.id);
+      addLog(state, 'skill', `${char.name}躲进兜帽，获得 1 层护盾。`, player.id);
       break;
     }
     case 'naughty_dumpling': {
-      addLog(state, 'skill', `团团准备好了！下一张互动牌的目标将被重定向。`, player.id);
+      state.skillRedirects ||= {};
+      state.skillRedirects[player.id] = target!.id;
+      addLog(state, 'skill', `${char.name}准备好了！下一张指定玩家的互动牌将重定向给 ${target!.name}。`, player.id);
       break;
     }
     case 'dream_painter': {
       if (state.discard.length > 0) {
         const rc = state.discard.pop()!;
         player.hand.push(rc);
-        addLog(state, 'skill', `画画将弃牌堆的「${getCard(rc)?.name}」重绘后加入手牌。`, player.id);
+        addLog(state, 'skill', `${char.name}将弃牌堆的「${getCard(rc)?.name}」重绘后加入手牌。`, player.id);
       } else {
         drawCards(state, player, 1);
       }
@@ -959,7 +1068,7 @@ function applySkill(
           state.turnOrder.splice(pIdx, 1);
           state.turnOrder.push(player.id);
         }
-        addLog(state, 'skill', `咔咔保护了 ${target.name}（+2 护盾），但自己下回合行动延后。`, player.id);
+        addLog(state, 'skill', `${char.name}保护了 ${target.name}（+2 护盾），但自己下回合行动延后。`, player.id);
       }
       break;
     }
@@ -1023,7 +1132,7 @@ export function resolveFinalVictory(state: RoomState): VictoryResult {
     tricksterWin,
     dreamersWon,
     guardianWin,
-    keyEvents: state.actionLog.slice(-10).map((l) => l.message),
+    keyEvents: state.actionLog.filter((l) => !l.hiddenFor?.length).slice(-10).map((l) => l.message),
     finalWishProgress: state.wishProgress,
     finalFragments: state.wishFragments,
     roundReached: state.round,
@@ -1055,7 +1164,7 @@ export function botTakeTurn(state: RoomState, playerId: string) {
     const c = getCard(id);
     return c?.effects.some((e) => e.type === 'damage');
   });
-  if (damageCards.length > 0 && weakest && rng() < 0.6) {
+  if (damageCards.length > 0 && weakest && random(state) < 0.6) {
     if (playerAction(state, playerId, 'playCard', { cardId: damageCards[0], targetId: weakest.id }).ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
 
@@ -1069,7 +1178,7 @@ export function botTakeTurn(state: RoomState, playerId: string) {
   }
 
   // 3. 使用技能
-  if (!player.usedSkillThisTurn && rng() < 0.5) {
+  if (!player.usedSkillThisTurn && random(state) < 0.5) {
     const target = strongest || weakest;
     if (playerAction(state, playerId, 'useSkill', { targetId: target?.id }).ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
@@ -1080,7 +1189,7 @@ export function botTakeTurn(state: RoomState, playerId: string) {
     return c?.category === 'friendship' || c?.category === 'guard';
   });
   if (friendlyCards.length > 0) {
-    const target = enemies[Math.floor(rng() * enemies.length)];
+    const target = enemies[Math.floor(random(state) * enemies.length)];
     if (playerAction(state, playerId, 'playCard', { cardId: friendlyCards[0], targetId: target?.id }).ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
 
@@ -1091,8 +1200,8 @@ export function botTakeTurn(state: RoomState, playerId: string) {
 
   // 6. 任意牌
   if (player.hand.length > 0) {
-    const cardId = player.hand[Math.floor(rng() * player.hand.length)];
-    const target = enemies[Math.floor(rng() * enemies.length)];
+    const cardId = player.hand[Math.floor(random(state) * player.hand.length)];
+    const target = enemies[Math.floor(random(state) * enemies.length)];
     if (playerAction(state, playerId, 'playCard', { cardId, targetId: target?.id }).ok) { playerAction(state, playerId, 'endTurn'); return; }
   }
 

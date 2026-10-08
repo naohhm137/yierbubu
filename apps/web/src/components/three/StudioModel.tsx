@@ -1,7 +1,9 @@
 import { useGLTF } from '@react-three/drei';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import * as THREE from 'three';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 const DISPLAY_HEIGHT = 1.6;
 
@@ -44,9 +46,42 @@ export function createStudioInstance(source: THREE.Object3D, height = DISPLAY_HE
  * source scene; cloned meshes deliberately opt out of drei disposal so one
  * player unmounting cannot invalidate another player's shared resources.
  */
-export function StudioModel({ characterId }: { characterId: string }) {
-  const { scene } = useGLTF(`/models/studio/${characterId}.glb`, false, false);
+export function StudioModel({ characterId, active = false, dreaming = false }: { characterId: string; active?: boolean; dreaming?: boolean }) {
+  const { scene, animations } = useGLTF(`/models/studio/${characterId}.glb`, false, false);
+  const reduced = useReducedMotion();
+  const { gl } = useThree();
   const model = useMemo(() => createStudioInstance(scene), [scene]);
+  const mixer = useMemo(() => new THREE.AnimationMixer(model), [model]);
+  useEffect(() => {
+    const anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy());
+    model.traverse(object => {
+      if (!(object as THREE.Mesh).isMesh) return;
+      const material = (object as THREE.Mesh).material;
+      for (const mat of Array.isArray(material) ? material : [material]) {
+        const pbr = mat as THREE.MeshStandardMaterial;
+        for (const texture of [pbr.map, pbr.normalMap, pbr.roughnessMap]) {
+          if (texture) texture.anisotropy = anisotropy;
+        }
+      }
+    });
+  }, [gl, model]);
+  useEffect(() => {
+    if (!reduced) {
+      for (const name of ['Idle', 'Blink']) {
+        const clip = animations.find(item => item.name === name);
+        if (clip) mixer.clipAction(clip).play();
+      }
+    }
+    return () => { mixer.stopAllAction(); mixer.uncacheRoot(model); };
+  }, [animations, mixer, model, reduced]);
+  useEffect(() => {
+    const clip = animations.find(item => item.name === 'Celebrate');
+    if (!clip || reduced || !active || dreaming) return;
+    const action = mixer.clipAction(clip);
+    action.reset().setLoop(THREE.LoopOnce, 1).fadeIn(.18).play();
+    return () => { action.stop(); };
+  }, [active, dreaming, reduced, animations, mixer]);
+  useFrame((_, delta) => { if (!reduced) mixer.update(Math.min(delta, .05)); });
   return <primitive object={model} dispose={null} />;
 }
 

@@ -13,7 +13,7 @@
     "build": "npm --workspace apps/web run build",
     "build:server": "npm --workspace apps/server run build",
     "start": "npm --workspace apps/server run start",
-    "test": "npx tsx --test packages/shared/src/engine.test.ts",
+    "test": "tsx --test packages/shared/src/engine.test.ts apps/server/src/RoomManager.test.ts apps/server/src/socketProtocol.test.ts",
     "test:engine": "npx tsx --test packages/shared/src/engine.test.ts",
     "lint": "echo \"(lint placeholder)\""
   },

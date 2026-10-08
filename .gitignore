@@ -19,3 +19,9 @@ pnpm-debug.log*
 *.js.map
 *.tsbuildinfo
 apps/web/dist/
+*.blend1
+__pycache__/
+*.pyc
+art/verification/**/*failure.png
+art/verification/**/*debug.png
+docs/reviews/*.diff

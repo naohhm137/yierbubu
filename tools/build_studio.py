@@ -5,6 +5,8 @@ Coordinates in authoring helpers are x, front, height; glTF exports Y-up.
 import bpy, math, os, sys, json
 from pathlib import Path
 from mathutils import Vector
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from studio_materials import finish_material
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / 'apps/web/public'
@@ -12,12 +14,12 @@ MASTER = ROOT / 'art/blender'
 for p in [MASTER, PUBLIC/'models/studio', PUBLIC/'studio/portraits']:
     p.mkdir(parents=True, exist_ok=True)
 PALETTES = {
- 'yier': ('fff9f0','efabba','7b4335'), 'bubu': ('c28a66','f0cc7c','76513e'),
- 'duoduo': ('dcebef','e6b2b8','779faa'), 'tangtang': ('e9b4c6','f7d4ba','a96279'),
- 'asong': ('ab7a52','e5b870','5f775b'), 'yueyue': ('c2b5db','eabac9','726288'),
- 'xiaoban': ('d8ab76','efc57a','657d88'), 'mimi': ('efdbaa','edaac1','ac738a'),
- 'qiaoqiao': ('ecebf6','d6b7df','9a8aad'), 'tuantuan': ('f1dfc4','f1b6ab','d6ac84'),
- 'huahua': ('e2c4cf','eeb2c0','749c83'), 'kaka': ('a5bac0','e9b392','b99259'),
+ 'yier': ('fff9f0','f1a4a8','63372b'), 'bubu': ('b98159','efc46d','69422d'),
+ 'duoduo': ('fff9f0','f1a4a8','779faa'), 'tangtang': ('b98159','efc46d','a96279'),
+ 'asong': ('b98159','efc46d','5f775b'), 'yueyue': ('fff9f0','f1a4a8','726288'),
+ 'xiaoban': ('b98159','efc46d','657d88'), 'mimi': ('fff9f0','f1a4a8','ac738a'),
+ 'qiaoqiao': ('fff9f0','f1a4a8','9a8aad'), 'tuantuan': ('b98159','efc46d','d6ac84'),
+ 'huahua': ('fff9f0','f1a4a8','749c83'), 'kaka': ('b98159','efc46d','b99259'),
 }
 ASSET_OBJECTS = []
 def rgb(h):
@@ -30,18 +32,14 @@ def material(name, hexcolor, rough=.55, metal=0, cloth=False):
     p.inputs['Base Color'].default_value=(*rgb(hexcolor),1)
     p.inputs['Roughness'].default_value=rough; p.inputs['Metallic'].default_value=metal
     p.inputs['Specular IOR Level'].default_value=.32
-    if cloth:
-        p.inputs['Sheen Weight'].default_value=.18
-        noise=n.new('ShaderNodeTexNoise'); noise.inputs['Scale'].default_value=155
-        bump=n.new('ShaderNodeBump'); bump.inputs['Strength'].default_value=.13; bump.inputs['Distance'].default_value=.018
-        links.new(noise.outputs['Fac'],bump.inputs['Height']); links.new(bump.outputs['Normal'],p.inputs['Normal'])
+    if cloth: finish_material(m,'cloth')
     return m
 def smooth(o,m):
     o.data.materials.append(m)
     for p in o.data.polygons:p.use_smooth=True
     ASSET_OBJECTS.append(o); return o
 def sp(v,e): return math.copysign(abs(v)**e,v)
-def shape(name,pos,scale,mat,e1=1,e2=1,pear=0,seg=64,rings=40):
+def shape(name,pos,scale,mat,e1=1,e2=1,pear=0,seg=48,rings=32):
     # Deform a connected UV surface into a soft superellipsoid, never a box stack.
     bpy.ops.mesh.primitive_uv_sphere_add(segments=seg,ring_count=rings,location=xyz(pos))
     o=bpy.context.object; o.name=name
@@ -108,33 +106,34 @@ def bib(mat,thread,gold):
 def make_character(cid):
     ASSET_OBJECTS.clear()
     fur,blush,accent=PALETTES[cid]
-    skin=material(cid+' soft vinyl',fur,.56)
-    ear=material('Chocolate ear','6b392b' if cid=='yier' else accent,.65)
-    detail=material('Dark cocoa face','41251e',.40)
+    is_white=fur=='fff9f0'
+    skin=finish_material(material(cid+' micrograin vinyl',fur,.53),'vinyl')
+    ear=material('Chocolate ear','532d23' if is_white else '765139',.57)
+    detail=material('Dark cocoa face','382019',.24)
     cloth=material(cid+' woven fabric',accent,.76,cloth=True)
     thread=material('Ivory stitching','ebdfc9',.83)
     gold=material('Satin brass','d9b66b',.32,.63)
     pink=material('Rosy tongue','da7f8c',.6)
     white=material('Cream accent','fff8e9',.67)
     body=[]
-    body.append(shape('Pear torso',(0,0,.68),(.53,.41,.60),skin,.9,1,pear=.15))
+    body.append(shape('Pear torso',(0,0,.62),(.49,.38,.49),skin,.96,1,pear=.10))
     for s in (-1,1):
-        arm=shape('Short paw',(s*.52,.05,.72),(.18,.215,.315),skin)
-        arm.rotation_euler[1]=s*.23;body.append(arm)
+        arm=shape('Paw L' if s<0 else 'Paw R',(s*.48,.07,.66),(.16,.195,.25),skin)
+        arm.rotation_euler[1]=s*.20
         body.append(shape('Rounded foot',(s*.27,.16,.14),(.26,.31,.14),skin,.9,.94))
     union_body(body,skin)
-    if cid!='qiaoqiao':shape('Tiny tail',(0,-.42,.46),(.145,.14,.145),skin)
+    shape('Tiny tail',(0,-.38,.43),(.13,.13,.13),skin)
     # Broad, softly squared bear head with a flattened lower jaw.
-    a,b,c=.84,.58,.70; zc=1.63; exponent=.78
-    head=shape('Sculpted rounded head',(0,0,zc),(a,b,c),skin,exponent,.85,seg=96,rings=64)
+    a,b,c=.88,.57,.68; zc=1.58; exponent=.89
+    head=shape('Sculpted rounded head',(0,0,zc),(a,b,c),skin,exponent,.85,seg=72,rings=48)
     # Blush is vertex paint on the head surface, no floating cheek discs.
     cm=skin.copy();cm.name=cid+' painted face';head.data.materials.clear();head.data.materials.append(cm)
     col=head.data.color_attributes.new(name='Col',type='FLOAT_COLOR',domain='POINT')
     base=rgb(fur); rosy=rgb(blush)
     for v in head.data.vertices:
         x,y,z=v.co; front=max(0,min(1,(-y-.25)/.18))
-        d=min(((x-.49)/.15)**2+((z+.17)/.115)**2,((x+.49)/.15)**2+((z+.17)/.115)**2)
-        w=math.exp(-d*1.25)*.88*front
+        d=min(((x-.51)/.16)**2+((z+.23)/.13)**2,((x+.51)/.16)**2+((z+.23)/.13)**2)
+        w=math.exp(-d*.9)*.97*front
         col.data[v.index].color=tuple(base[i]*(1-w)+rosy[i]*w for i in range(3))+(1,)
     node=cm.node_tree.nodes.new('ShaderNodeVertexColor');node.layer_name='Col'
     cm.node_tree.links.new(node.outputs['Color'],cm.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
@@ -142,18 +141,17 @@ def make_character(cid):
         t=max(0,1-abs((z-zc)/c)**(2/exponent))**(exponent/.85)-abs(x/a)**(2/.85)
         return b*max(t,0)**(.85/2)
     for s in (-1,1):
-        if cid not in ('qiaoqiao','tuantuan','duoduo','kaka'):
-            em=ear if cid=='yier' else skin
-            shape('Rounded ear',(s*.59,-.035,2.16),(.20,.15,.22),em)
-            if cid!='yier':shape('Inset inner ear',(s*.59,.107,2.17),(.102,.022,.115),ear)
-        x=s*.28;z=1.57
-        shape('Small glossy eye',(x,depth(x,z)+.018,z),(.051,.026,.058),detail,seg=40,rings=24)
+        em=ear if is_white else skin
+        shape('Rounded ear',(s*.59,-.035,2.12),(.20,.15,.20),em)
+        if not is_white:shape('Inset inner ear',(s*.59,.107,2.13),(.102,.022,.10),ear)
+        x=s*.29;z=1.48
+        shape('Eye L' if s<0 else 'Eye R',(x,depth(x,z)+.018,z),(.055,.024,.058),detail,seg=32,rings=20)
         shape('Eye soft catchlight',(x-.013,depth(x,z)+.04,z+.018),(.009,.007,.011),white,seg=20,rings=12)
     # Curved W mouth conforming to the face, shallow embossed curves.
-    pts=[(-.106,1.448),(-.088,1.392),(-.040,1.395),(0,1.438),(.04,1.395),(.088,1.392),(.106,1.448)]
+    pts=[(-.092,1.398),(-.081,1.361),(-.036,1.363),(0,1.39),(.036,1.363),(.081,1.361),(.092,1.398)]
     curve('Embossed smile',[(x,depth(x,z)+.014,z) for x,z in pts],.015,detail)
-    if cid=='yier':shape('Little tongue',(.008,depth(0,1.365)+.025,1.369),(.03,.018,.033),pink)
-    if cid=='bubu':
+    if is_white:shape('Little tongue',(.008,depth(0,1.333)+.025,1.337),(.027,.018,.03),pink)
+    if not is_white:
         # Familiar forehead curl and chocolate bow, no oversized muzzle.
         curve('Forehead curl',[(-.02,depth(-.02,2.12)+.01,2.12),(.035,depth(.035,2.09)+.015,2.09),(.053,depth(.053,2.04)+.01,2.04)],.016,ear)
     if cid in ('yier','bubu'):
@@ -169,7 +167,6 @@ def make_character(cid):
         for x in (-.1,.1):disc('Apron button',(x,.452,.85),.025,.015,cloth)
     elif cid=='asong':
         cap('Detective cap',(0,0,2.31),.48,cloth,thread)
-        tail=shape('Curled squirrel tail',(.36,-.44,.69),(.32,.29,.64),ear);tail.rotation_euler[1]=-.24
         ring('Magnifying glass',(.68,.3,.86),.13,.022,gold)
         curve('Magnifier handle',[(.67,.3,.73),(.65,.3,.5)],.034,ear)
     elif cid=='yueyue':
@@ -202,7 +199,6 @@ def make_character(cid):
         shape('Post satchel',(.42,.44,.52),(.24,.09,.22),cloth,.6,.7)
         curve('Envelope fold',[(.23,.542,.64),(.42,.546,.52),(.61,.542,.64)],.009,thread)
     elif cid=='qiaoqiao':
-        for x in (-.39,-.2,0,.2,.39):shape('Ghost scallop',(x,.01,.22),(.18,.36,.18),skin)
         star('Moon pearl',(.5,.43,2.02),.105,gold)
         curve('Sleep cap fold',[(-.3,0,2.25),(0,0,2.49),(.36,0,2.30)],.13,cloth)
         shape('Sleep pompom',(.37,0,2.25),(.11,.11,.11),white)
@@ -216,13 +212,65 @@ def make_character(cid):
         shape('Brush bristles',(.66,.28,1.17),(.046,.043,.11),pink)
         for i,col in enumerate(('edbd70','c77187','92b2ac')):disc('Paint dab',(-.2+i*.2,.456,.68),.039,.015,material('Paint'+str(i),col))
     elif cid=='kaka':
-        for s in (-1,1):shape('Robot ear',(s*.84,0,1.68),(.13,.20,.20),gold,.7,.8)
-        curve('Antenna',[(0,0,2.27),(0,0,2.56)],.03,gold)
-        shape('Antenna lamp',(0,0,2.58),(.077,.077,.077),pink)
+        cap('Workshop cap',(0,0,2.28),.43,cloth,thread)
         shape('Robot chest',(0,.37,.73),(.32,.065,.26),cloth,.6,.6)
         for x in (-.12,0,.12):disc('Chest controls',(x,.451,.78),.031,.012,gold)
         ring('Winding key',(.0,-.56,.90),.13,.03,gold)
     return [o for o in bpy.context.scene.objects if o.type in ('MESH','CURVE')]
+
+
+def rig_character(objects):
+    # Rigid weighted toy parts retain sculpted silhouettes during small gestures.
+    for o in objects:
+        if o.type=='CURVE':
+            bpy.ops.object.select_all(action='DESELECT');o.select_set(True)
+            bpy.context.view_layer.objects.active=o;bpy.ops.object.convert(target='MESH')
+        if not o.data.uv_layers:
+            bpy.ops.object.select_all(action='DESELECT');o.select_set(True)
+            bpy.context.view_layer.objects.active=o;bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT');bpy.ops.uv.smart_project(island_margin=.02)
+            bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.armature_add(location=(0,0,0))
+    rig=bpy.context.object;rig.name='BearRig'
+    bpy.ops.object.mode_set(mode='EDIT');rig.data.edit_bones.remove(rig.data.edit_bones[0])
+    definitions=[('Root',(0,0,0),(0,0,.55),None),('Head',(0,0,1.1),(0,0,1.8),'Root'),
+                 ('ArmL',(-.40,-.04,.89),(-.51,-.04,.53),'Root'),('ArmR',(.40,-.04,.89),(.51,-.04,.53),'Root')]
+    for name,head,tail,parent in definitions:
+        b=rig.data.edit_bones.new(name);b.head=head;b.tail=tail
+        if parent:b.parent=rig.data.edit_bones[parent]
+    bpy.ops.object.mode_set(mode='OBJECT')
+    eye_objects=[]
+    for o in objects:
+        bone='ArmL' if o.name.startswith('Paw L') else 'ArmR' if o.name.startswith('Paw R') else 'Head' if o.location.z>1.2 else 'Root'
+        vg=o.vertex_groups.new(name=bone);vg.add(list(range(len(o.data.vertices))),1,'REPLACE')
+        modifier=o.modifiers.new('Bear articulation','ARMATURE');modifier.object=rig
+        o.parent=rig
+        if o.name.startswith('Eye ') or o.name.startswith('Eye soft catchlight'):eye_objects.append(o)
+    rig.animation_data_create()
+    for clip in ('Idle','Celebrate'):
+        action=bpy.data.actions.new(clip);rig.animation_data.action=action
+        for f in (1,31,61,91,121):
+            t=(f-1)/120
+            for pb in rig.pose.bones:pb.rotation_mode='XYZ';pb.rotation_euler=(0,0,0)
+            rig.pose.bones['Head'].rotation_euler[1]=math.sin(t*math.tau)*(.024 if clip=='Idle' else .07)
+            if clip=='Celebrate':
+                rig.pose.bones['ArmL'].rotation_euler[0]=math.sin(t*math.pi)**2*.62
+                rig.pose.bones['ArmR'].rotation_euler[0]=math.sin(t*math.pi)**2*.62
+            for pb in rig.pose.bones:pb.keyframe_insert('rotation_euler',frame=f)
+        rig.animation_data.action=None
+        track=rig.animation_data.nla_tracks.new();track.name=clip
+        strip=track.strips.new(clip,1,action);strip.action_frame_start=1;strip.action_frame_end=121
+        track.mute=True
+    for o in eye_objects:
+        action=bpy.data.actions.new(o.name+' Blink');o.animation_data_create();o.animation_data.action=action
+        for f,z in [(1,1),(78,1),(80,.08),(82,1),(121,1)]:
+            o.scale.z=z;o.keyframe_insert('scale',frame=f)
+        o.animation_data.action=None
+        track=o.animation_data.nla_tracks.new();track.name='Blink';track.strips.new('Blink',1,action);track.mute=True
+        o.scale=(1,1,1)
+    bpy.context.scene.frame_set(1)
+    bpy.context.scene.render.fps=30
+    return rig
 
 def clean_scene():
     bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
@@ -230,6 +278,8 @@ def clean_scene():
         if not m.users:bpy.data.meshes.remove(m)
     for m in list(bpy.data.materials):
         if not m.users:bpy.data.materials.remove(m)
+    for a in list(bpy.data.actions):
+        if not a.users:bpy.data.actions.remove(a)
 def aim(o,target):o.rotation_euler=(Vector(xyz(target))-o.location).to_track_quat('-Z','Y').to_euler()
 def stage(duo=False):
     ground=material('Seamless ivory','e5e1d7',.93)
@@ -251,9 +301,11 @@ def stage(duo=False):
     return sc
 def export_character(cid):
     clean_scene();objects=make_character(cid)
+    rig=rig_character(objects)
     bpy.ops.object.select_all(action='DESELECT')
     for o in objects:o.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=str(PUBLIC/'models/studio'/f'{cid}.glb'),export_format='GLB',use_selection=True,export_apply=True,export_animations=False,export_yup=True)
+    rig.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=str(PUBLIC/'models/studio'/f'{cid}.glb'),export_format='GLB',use_selection=True,export_apply=False,export_animations=True,export_nla_strips=True,export_yup=True)
     sc=stage();sc.render.filepath=str(PUBLIC/'studio/portraits'/f'{cid}.webp')
     bpy.ops.wm.save_as_mainfile(filepath=str(MASTER/f'{cid}.blend'),compress=True)
     bpy.ops.render.render(write_still=True)

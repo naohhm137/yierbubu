@@ -247,6 +247,78 @@ export const CARDS: Card[] = [
     [{ type: 'gainFriendship', value: 1, target: 'all' }, { type: 'modifyScene', target: 'all' }], 'rare'),
 ];
 
+// 当前试玩规则使用明确的即时效果，避免文案承诺尚不存在的响应/选择协议。
+const redesign: Record<string, { description: string; effects?: Card['effects']; cost?: Card['cost'] }> = {
+  I02: { description: '交换自己与目标玩家在行动顺序中的位置；本轮已行动的玩家不会重复行动。' },
+  I04: { description: '自己与目标各随机交换一张剩余手牌。' },
+  I05: { description: '自己抽 1 张牌。', effects: [{ type: 'draw', value: 1, target: 'self' }] },
+  I06: { description: '随机禁止一种卡牌类别，持续至本轮结束。' },
+  I07: { description: '随机帮助目标（+1 友情）或使目标受到 1 点伤害；结果公开。' },
+  I08: { description: '目标受到 1 点伤害，自己恢复 1 点活力。', effects: [{ type: 'damage', value: 1, target: 'other' }, { type: 'heal', value: 1, target: 'self' }] },
+  I09: { description: '自己失去 1 点友情，目标获得 2 点友情。', effects: [{ type: 'gainFriendship', value: -1, target: 'self' }, { type: 'gainFriendship', value: 2, target: 'other' }] },
+  I10: { description: '立即随机排列行动顺序；本轮已行动的玩家不会重复行动。' },
+  I11: { description: '指定一名行动中的玩家，把下一张指定玩家的互动牌重定向给该玩家；触发一次。' },
+  I12: { description: '向所有玩家公开目标的一张随机手牌。' },
+  I13: { description: '目标随机弃 1 张牌，并受到 1 点伤害。' },
+  I14: { description: '自己与目标各秘密查看对方一张随机剩余手牌。' },
+  I15: { description: '目标失去 1 点友情，自己获得 1 层护盾。', effects: [{ type: 'gainFriendship', value: -1, target: 'other' }, { type: 'shield', value: 1, target: 'self' }] },
+  I16: { description: '目标受到 1 点伤害，自己获得 1 点友情。' },
+  I17: { description: '自己立即移到行动顺序首位；本轮不会重复获得回合。' },
+  I18: { description: '自己与目标各获得 1 点友情。', effects: [{ type: 'gainFriendship', value: 1, target: 'other' }, { type: 'gainFriendship', value: 1, target: 'self' }] },
+  I19: { description: '自己与目标各随机弃 1 张剩余手牌，然后随机一方受到 1 点伤害。', effects: [{ type: 'discard', value: 1, target: 'self' }, { type: 'discard', value: 1, target: 'other' }, { type: 'randomEvent', target: 'other' }] },
+  I20: { description: '自己与目标建立双向羁绊。' },
+  I21: { description: '解除自己与目标之间的羁绊。' },
+  I22: { description: '隐藏目标本轮出牌和使用技能的公告；目标须尚未执行主行动，资源变化仍公开。' },
+  I23: { description: '目标失去 2 点友情（最低为 0）。', effects: [{ type: 'gainFriendship', value: -2, target: 'other' }] },
+  G02: { description: '自己获得 1 层护盾。' }, G03: { description: '自己获得 1 层护盾。' },
+  G04: { description: '目标获得 1 层护盾，自己获得 1 点友情。', effects: [{ type: 'shield', value: 1, target: 'other' }, { type: 'gainFriendship', value: 1, target: 'self' }] },
+  G05: { description: '所有行动中的玩家各获得 1 层护盾并抽 1 张牌。', effects: [{ type: 'shield', value: 1, target: 'all' }, { type: 'draw', value: 1, target: 'all' }] },
+  G06: { description: '自己抽 1 张牌。' },
+  G07: { description: '自己恢复 2 点活力并失去 1 点友情（最低为 0）。', effects: [{ type: 'heal', value: 2, target: 'self' }, { type: 'gainFriendship', value: -1, target: 'self' }] },
+  G08: { description: '所有行动中的玩家各获得 1 层护盾。' },
+  G09: { description: '自己获得 1 层护盾并抽 1 张牌。', effects: [{ type: 'shield', value: 1, target: 'self' }, { type: 'draw', value: 1, target: 'self' }] },
+  G10: { description: '自己抽 1 张牌并获得 1 点友情。' },
+  G11: { description: '自己恢复 1 点活力并抽 1 张牌。' },
+  G12: { description: '目标恢复 1 点活力并获得 1 点友情。', effects: [{ type: 'heal', value: 1, target: 'other' }, { type: 'gainFriendship', value: 1, target: 'other' }] },
+  G13: { description: '自己与目标各获得 1 层护盾。' },
+  G14: { description: '自己与目标建立羁绊，并各获得 1 层护盾。', effects: [{ type: 'formBond', target: 'other' }, { type: 'shield', value: 1, target: 'other' }, { type: 'shield', value: 1, target: 'self' }] },
+  V03: { description: '所有行动中的玩家各恢复 1 点活力。' },
+  V05: { description: '目标恢复 1 点活力，自己受到 1 点伤害（可被护盾抵消）。' },
+  V06: { description: '自己获得 2 点友情。', effects: [{ type: 'gainFriendship', value: 2, target: 'self' }] },
+  V07: { description: '目标恢复 2 点活力。' },
+  V08: { description: '消耗 2 点友情，自己恢复 3 点活力。', cost: { friendship: 2 } },
+  A01: { description: '自己抽 1 张牌。' },
+  A02: { description: '自己与目标各抽 1 张牌。', effects: [{ type: 'draw', value: 1, target: 'self' }, { type: 'draw', value: 1, target: 'other' }] },
+  A03: { description: '自己立即移到行动顺序末尾；本轮不会重复获得回合。' },
+  A04: { description: '所有行动中的玩家各抽 1 张牌。' },
+  A05: { description: '取回弃牌堆中最近的一张其他牌；没有其他牌时抽 1 张。' },
+  A06: { description: '自己与目标随机交换一张剩余手牌。' },
+  A07: { description: '目标恢复 1 点活力并获得 1 层护盾。', effects: [{ type: 'heal', value: 1, target: 'other' }, { type: 'shield', value: 1, target: 'other' }] },
+  A08: { description: '自己获得 2 层护盾并抽 1 张牌。', effects: [{ type: 'shield', value: 2, target: 'self' }, { type: 'draw', value: 1, target: 'self' }] },
+  A09: { description: '取回最近的一张非奇遇牌，没有时抽 1 张；随后随机弃 1 张手牌。' },
+  A10: { description: '将牌堆顶最多 2 张牌公开展示后放入弃牌堆；不会触发牌堆重洗。', effects: [{ type: 'modifyScene', target: 'all' }] },
+  T02: { description: '自己获得 2 层护盾；玩具暴走时多 1 层护盾，另有 25% 概率立即移到行动顺序末尾。' },
+  T03: { description: '自己抽 2 张牌；玩具暴走时另有 25% 概率随机弃 1 张。', effects: [{ type: 'draw', value: 2, target: 'self' }] },
+  T04: { description: '随机切换成另一场景，立即启用其持续规则，不重复轮开始事件；玩具暴走时另有 25% 概率心愿进度 -1。' },
+  T05: { description: '自己获得 1 层护盾；玩具暴走时多 1 层，另有 25% 概率立即移到行动顺序末尾。' },
+  T06: { description: '自己抽 2 张牌并恢复 1 点活力；玩具暴走时各项效果会分别触发对应副作用。', effects: [{ type: 'draw', value: 2, target: 'self' }, { type: 'heal', value: 1, target: 'self' }] },
+  T07: { description: '团队心愿进度 +1；玩具暴走时另有 25% 概率心愿进度 -1。' },
+  T08: { description: '自己与目标各获得 2 点友情；玩具暴走时每项友情效果分别有 25% 概率使自己失去 1 点友情。', effects: [{ type: 'gainFriendship', value: 2, target: 'other' }, { type: 'gainFriendship', value: 2, target: 'self' }] },
+  F01: { description: '将一张随机剩余手牌交给目标，双方各获得 1 点友情；需要至少一张其他手牌。' },
+  F04: { description: '自己与目标建立双向羁绊。' },
+  F05: { description: '目标获得 1 点友情，自己与目标各抽 1 张牌。' },
+  F06: { description: '消耗所有友情，每点友情恢复自己 1 点活力；至少需要 1 点友情。' },
+  F07: { description: '自己与所有行动中的羁绊对象各抽 1 张牌。' },
+};
+for (const card of CARDS) {
+  const rule = redesign[card.id];
+  if (!rule) continue;
+  card.description = rule.description;
+  card.hint = rule.description;
+  if (rule.effects) card.effects = rule.effects;
+  if (rule.cost) card.cost = rule.cost;
+}
+
 export const CARD_MAP: Record<string, Card> = Object.fromEntries(
   CARDS.map((card) => [card.id, card])
 );

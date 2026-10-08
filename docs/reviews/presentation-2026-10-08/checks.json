@@ -1,0 +1,85 @@
+{
+  "desktop": {
+    "viewport": 1440,
+    "content": 1440,
+    "overflow": false
+  },
+  "input": {
+    "color": "rgb(73, 52, 44)",
+    "fontSize": "16px",
+    "width": 428
+  },
+  "practice": {
+    "packets": [
+      {
+        "event": "createRoom",
+        "data": {
+          "playerName": "茶会新朋友"
+        }
+      },
+      {
+        "event": "selectCharacter",
+        "data": {
+          "characterId": "yier"
+        }
+      },
+      {
+        "event": "fillBots",
+        "data": {
+          "count": 4
+        }
+      },
+      {
+        "event": "startGame"
+      }
+    ],
+    "players": [
+      {
+        "name": "茶会新朋友",
+        "isBot": false,
+        "characterId": "yier"
+      },
+      {
+        "name": "小糖",
+        "isBot": true,
+        "characterId": "duoduo"
+      },
+      {
+        "name": "云朵",
+        "isBot": true,
+        "characterId": "huahua"
+      },
+      {
+        "name": "星星",
+        "isBot": true,
+        "characterId": "tuantuan"
+      },
+      {
+        "name": "月亮",
+        "isBot": true,
+        "characterId": "qiaoqiao"
+      }
+    ],
+    "phase": "playing"
+  },
+  "mobile": {
+    "viewport": 390,
+    "content": 390,
+    "overflow": false
+  },
+  "failedJoinRecovery": "Invalid room keeps editable menu form",
+  "rulesMobile": {
+    "viewport": 390,
+    "content": 390,
+    "overflow": false
+  },
+  "narrowMobile": {
+    "viewport": 320,
+    "content": 320,
+    "overflow": false
+  },
+  "returnFromRules": "menu→rules→menu, lobby→rules held across fill/start broadcasts→game",
+  "rejectedPracticeRecovery": "Real server rejection for invalid fillBots returns to created lobby",
+  "practiceTimeoutRecovery": "Dropped startGame packet, advanced 15 seconds, returned to existing lobby",
+  "pageErrors": []
+}

@@ -74,8 +74,12 @@ function AuthoredTableScene() {
     copy.traverse((object) => {
       if (!(object as THREE.Mesh).isMesh) return;
       const mesh = object as THREE.Mesh;
-      mesh.castShadow = true;
+      mesh.castShadow = !/cyclorama|floor/i.test(mesh.name);
       mesh.receiveShadow = true;
+      if (/cyclorama/i.test(mesh.name)) {
+        mesh.material = new THREE.MeshBasicMaterial({ color: '#e8e4d8', side: THREE.FrontSide });
+        mesh.receiveShadow = false;
+      }
     });
     return copy;
   }, [scene]);
@@ -87,6 +91,25 @@ function AuthoredTableScene() {
  * procedural scene remains fully local and interactive. */
 export function TableScene() {
   return <ErrorBoundary fallback={<LegacyTableScene />}><AuthoredTableScene /></ErrorBoundary>;
+}
+
+function AuthoredSeat({ position }: { position: [number, number, number] }) {
+  const { scene } = useGLTF('/models/studio/stool.glb', false, false);
+  const seat = useMemo(() => {
+    const copy = scene.clone(true);
+    copy.traverse(object => { if ((object as THREE.Mesh).isMesh) {
+      (object as THREE.Mesh).castShadow = true;
+      (object as THREE.Mesh).receiveShadow = true;
+    } });
+    return copy;
+  }, [scene]);
+  return <primitive object={seat} position={position} dispose={null} />;
+}
+
+export function StudioSeat({ position }: { position: [number, number, number] }) {
+  return <ErrorBoundary fallback={<mesh position={[position[0], .24, position[2]]}>
+    <cylinderGeometry args={[.42, .34, .48, 32]} /><meshStandardMaterial color="#986b48" roughness={.7} />
+  </mesh>}><AuthoredSeat position={position} /></ErrorBoundary>;
 }
 
 useGLTF.preload('/models/studio/table-scene.glb');

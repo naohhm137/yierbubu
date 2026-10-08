@@ -23,6 +23,8 @@ interface GameContextValue {
   cards: Card[];
   // 操作
   createRoom: () => void;
+  quickPractice: () => void;
+  preparingPractice: boolean;
   joinRoom: (roomId: string) => void;
   leaveRoom: () => void;
   setReady: (ready: boolean) => void;
@@ -47,6 +49,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(getSocket());
+  const [preparingPractice, setPreparingPractice] = useState(false);
+  const practiceRef = useRef<{ stage: 'creating' | 'selecting' | 'filling' | 'starting'; roomId?: string } | null>(null);
+  const practiceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const roomPhaseRef = useRef<string | null>(null);
+
+  const finishPractice = useCallback(() => {
+    practiceRef.current = null;
+    setPreparingPractice(false);
+    if (practiceTimerRef.current) clearTimeout(practiceTimerRef.current);
+    practiceTimerRef.current = null;
+  }, []);
 
   useEffect(() => {
     const socket = socketRef.current;
@@ -55,22 +68,58 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setConnected(true);
       setPlayerId(socket.id ?? null);
     });
-    socket.on('disconnect', () => setConnected(false));
+    socket.on('disconnect', () => {
+      setConnected(false);
+      if (practiceRef.current) {
+        finishPractice();
+        setError('连接中断，请连接恢复后重新开始练习');
+        setScreen('menu');
+      }
+    });
     socket.on('roomCreated', (data: { roomId: string }) => {
       setRoomId(data.roomId);
-      setScreen('lobby');
+      if (practiceRef.current?.stage === 'creating') {
+        practiceRef.current = { stage: 'selecting', roomId: data.roomId };
+        socket.emit('selectCharacter', { characterId: 'yier' });
+      } else {
+        setScreen('lobby');
+      }
     });
     socket.on('roomState', (data: { public: PublicRoomView; private?: PrivatePlayerView }) => {
+      setRoomId(data.public.roomId);
       setRoom(data.public);
       if (data.private) setPrivateView(data.private);
-      if (data.public.phase === 'playing' && screen !== 'game' && screen !== 'result') {
-        setScreen('game');
+      const practice = practiceRef.current;
+      if (practice?.roomId === data.public.roomId) {
+        if (data.public.phase === 'playing') {
+          finishPractice();
+          setScreen('game');
+        } else if (data.public.phase === 'lobby') {
+          const self = data.public.players.find(player => player.id === socket.id);
+          if (practice.stage === 'selecting' && self?.characterId === 'yier') {
+            practice.stage = 'filling';
+            socket.emit('fillBots', { count: 4 });
+          } else if (practice.stage === 'filling' && data.public.players.length === 5) {
+            practice.stage = 'starting';
+            socket.emit('startGame');
+          }
+        }
       }
-      if (data.public.phase === 'finished') {
-        setScreen('result');
+      const phaseKey = `${data.public.roomId}:${data.public.phase}`;
+      if (roomPhaseRef.current !== phaseKey) {
+        roomPhaseRef.current = phaseKey;
+        setScreen(current => {
+          if (current === 'rules' || current === 'codex' || practiceRef.current) return current;
+          return data.public.phase === 'playing' ? 'game' : data.public.phase === 'finished' ? 'result' : 'lobby';
+        });
       }
     });
     socket.on('error', (data: { message: string }) => {
+      if (practiceRef.current) {
+        const hasRoom = !!practiceRef.current.roomId;
+        finishPractice();
+        setScreen(hasRoom ? 'lobby' : 'menu');
+      }
       setError(data.message);
       setTimeout(() => setError(null), 3500);
     });
@@ -82,7 +131,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       socket.off('roomState');
       socket.off('error');
     };
-  }, [screen]);
+  }, [finishPractice]);
+
+  useEffect(() => () => {
+    if (practiceTimerRef.current) clearTimeout(practiceTimerRef.current);
+  }, []);
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -91,20 +144,38 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     socketRef.current.emit('createRoom', { playerName: playerName.trim() });
   }, [playerName]);
 
+  const quickPractice = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket.connected) { setError('还未连接，请稍后再试'); return; }
+    if (practiceRef.current) return;
+    const name = playerName.trim() || '茶会新朋友';
+    setPlayerName(name);
+    setError(null);
+    practiceRef.current = { stage: 'creating' };
+    setPreparingPractice(true);
+    practiceTimerRef.current = setTimeout(() => {
+      const hasRoom = !!practiceRef.current?.roomId;
+      finishPractice();
+      setError(hasRoom ? '练习准备超时，可在大厅继续或返回重试' : '创建练习房间超时，请重试');
+      setScreen(hasRoom ? 'lobby' : 'menu');
+    }, 15000);
+    socket.emit('createRoom', { playerName: name });
+  }, [playerName, finishPractice]);
+
   const joinRoom = useCallback((id: string) => {
     if (!playerName.trim()) { setError('请输入你的名字'); return; }
     socketRef.current.emit('joinRoom', { roomId: id, playerName: playerName.trim() });
-    setRoomId(id.toUpperCase());
-    setScreen('lobby');
   }, [playerName]);
 
   const leaveRoom = useCallback(() => {
+    finishPractice();
+    roomPhaseRef.current = null;
     socketRef.current.emit('leaveRoom');
     setRoomId(null);
     setRoom(null);
     setPrivateView(null);
     setScreen('menu');
-  }, []);
+  }, [finishPractice]);
 
   const setReady = useCallback((ready: boolean) => {
     socketRef.current.emit('setReady', { ready });
@@ -139,7 +210,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       screen, setScreen, roomId, playerId, playerName, setPlayerName,
       room, privateView, error, clearError,
       characters: CHARACTERS, cards: CARDS,
-      createRoom, joinRoom, leaveRoom, setReady, fillBots, removeBot,
+      createRoom, quickPractice, preparingPractice, joinRoom, leaveRoom, setReady, fillBots, removeBot,
       selectCharacter, startGame, doAction, restart, connected,
     }}>
       {children}
