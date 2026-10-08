@@ -25,11 +25,11 @@
 
 **Interfaces:** Keep playerAction/getPublicView and RoomManager methods; optional requester IDs may be added to management methods with socket handlers passing socket.id.
 
-- [ ] Add failing tests: peekHand and yier insight private to caster; active player departure preserves 72 unique cards and progresses; non-host cannot restart/change bots; unknown/duplicate character safely rejected or assigned; seeded bots finish complete games preserving all cards.
-- [ ] Run Node test runner via local tsx, capture expected failures.
-- [ ] Implement hiddenFor as all viewer IDs except caster; turn departing active humans into bots during playing; remove only in lobby; authorize management inside RoomManager; validate selection.
-- [ ] Run focused regressions and seeded simulations; server build.
-- [ ] Independent task review and resolve findings.
+- [x] Add failing tests: peekHand and yier insight private to caster; active player departure preserves 72 unique cards and progresses; non-host cannot restart/change bots; unknown/duplicate character safely rejected or assigned; seeded bots finish complete games preserving all cards.
+- [x] Run Node test runner via local tsx, capture expected failures.
+- [x] Implement hiddenFor as all viewer IDs except caster; turn departing active humans into bots during playing; remove only in lobby; authorize management inside RoomManager; validate selection.
+- [x] Run focused regressions and seeded simulations; server build.
+- [x] Independent task review and resolve findings.
 
 ### Task 2: Authored asset pipeline
 
@@ -37,11 +37,11 @@
 
 **Interfaces:** Preserve GLB and portrait paths. Export idle/blink/celebrate clip names. Export consistent named materials for micrograin, cloth, wood and ceramic.
 
-- [ ] Compare local authorized reference images and current output, set rounder body/head silhouette.
-- [ ] Build repeatable normal/roughness images and connect image nodes for glTF export; limit texture size to 512 per tile and share reused tiles.
-- [ ] Rig and export mother bear animation, use outfit palettes based on two bears.
-- [ ] Make fully detailed tea table and circular scenery, export GLB and editable blend.
-- [ ] Render cover, portraits and angle sheets; reimport GLB and assert texture/animation/bounds contracts.
+- [x] Compare local authorized reference images and current output, set rounder body/head silhouette.
+- [x] Build repeatable normal/roughness images and connect image nodes for glTF export; limit texture size to 512 per tile and share reused tiles.
+- [x] Rig and export mother bear animation, use outfit palettes based on two bears.
+- [x] Make fully detailed tea table and circular scenery, export GLB and editable blend.
+- [x] Render cover, portraits and angle sheets; reimport GLB and assert texture/animation/bounds contracts.
 
 ### Task 3: Web integration and presentation
 
@@ -49,15 +49,15 @@
 
 **Interfaces:** Central table-space constants; named animation clips used for active/dream states; self-contained environment reflection without remote CDN assets.
 
-- [ ] Fix height baseline and prevent background shell/floor casting shadows.
-- [ ] Add coherent local environment lighting, subtle shadows, texture anisotropy and animation playback with reduced motion.
-- [ ] Replace role appearance/copy with two-bear themes and align descriptions with engine behavior.
-- [ ] Make quick practice entry and clear action guidance; polished consistent cover/UI.
-- [ ] Build and run browser inspection at desktop/mobile; correct observed defects in one batch and confirm.
+- [x] Fix height baseline and prevent background shell/floor casting shadows.
+- [x] Add coherent local environment lighting, subtle shadows, texture anisotropy and animation playback with reduced motion.
+- [x] Replace role appearance/copy with two-bear themes and align descriptions with engine behavior.
+- [x] Make quick practice entry and clear action guidance; polished consistent cover/UI.
+- [x] Build and run browser inspection at desktop/mobile; correct observed defects in one batch and confirm.
 
 ### Task 4: Delivery verification
 
-- [ ] Independent review of final diff and tests, record any unresolved findings.
-- [ ] Run combined tests, seeded simulations, GLB contract, web/server builds and whitespace checks.
+- [x] Independent review of final diff and tests, record any unresolved findings.
+- [x] Run combined tests, seeded simulations, GLB contract, web/server builds and whitespace checks.
 - [ ] Commit only approved files, publish using established GitHub/Render workflow if connectivity allows.
 - [ ] Verify target SHA deployment, health, models and playable session; save dated acceptance report and exact remaining gaps.

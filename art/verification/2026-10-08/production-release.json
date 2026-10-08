@@ -1,0 +1,44 @@
+{
+  "base": "http://localhost:3002",
+  "checkedAt": "2026-10-08T14:36:58.745Z",
+  "health": {
+    "status": "ok",
+    "rooms": 0,
+    "version": "0.1.0"
+  },
+  "assets": {
+    "models/studio/yier.glb": {
+      "bytes": 1551916,
+      "sha256": "8ea224d0cec697be93e8c922526a1c16dcd00c0186c4f144d7efdef4b9131768"
+    },
+    "models/studio/bubu.glb": {
+      "bytes": 1603704,
+      "sha256": "61e6d03ef161ceab47ea4ba740e48a9498db0232dbf57ea3f428194d61c78a8e"
+    },
+    "models/studio/table-scene.glb": {
+      "bytes": 5187172,
+      "sha256": "2f948a653864cf877dec9804585772a1b6f541b31576ca623152db7abf4c42db"
+    },
+    "studio/duo-cover.webp": {
+      "bytes": 72712,
+      "sha256": "c642b610588bb52f2f5c05524b8f05244d2e6bd422d1dadf1d47344e3a6e046b"
+    }
+  },
+  "entry": "/assets/index-CKSHU9JC.js",
+  "views": [
+    {
+      "mobile": false,
+      "practice": true,
+      "defend": true,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "mobile": true,
+      "practice": true,
+      "defend": true,
+      "errors": [],
+      "overflow": false
+    }
+  ]
+}

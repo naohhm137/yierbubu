@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, Float, OrbitControls, useGLTF } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, SMAA } from '@react-three/postprocessing';
 import * as THREE from 'three';
-import type { PublicRoomView, PrivatePlayerView, Card } from '@yierbubu/shared';
+import type { PublicRoomView, PrivatePlayerView, Card, CardCategory } from '@yierbubu/shared';
 import { CHARACTERS, CARDS, SCENES } from '@yierbubu/shared';
 import { TableScene, StudioSeat } from './TableScene';
 import { StudioLighting } from './StudioLighting';
@@ -27,6 +27,8 @@ interface GameCanvasProps {
   targetPlayerIds?: string[];
   selectedCardId?: string | null;
   onReady?: () => void;
+  bannedCategory?: CardCategory | null;
+  seatedView?: boolean;
 }
 
 function SceneReady({ onReady }: { onReady?: () => void }) {
@@ -71,18 +73,57 @@ function LoadingFallback() {
   );
 }
 
-/** Keep the full table and every seat in view on narrow portrait screens. */
-function ResponsiveCamera() {
+/** 自适应相机 — 竖屏拉高看全桌，横屏/桌面保持第一人称 */
+function ResponsiveCamera({ seat, seatedView }: { seat: { x: number; z: number }; seatedView: boolean }) {
   const { camera, size } = useThree();
   useEffect(() => {
     const portrait = size.height > size.width * 1.15;
     const perspective = camera as THREE.PerspectiveCamera;
-    perspective.position.set(0, portrait ? 12 : 6.6, portrait ? 16 : 7.8);
-    perspective.fov = portrait ? 55 : 48;
+    if (seatedView) {
+      // Sit above the table, forward of the player's own figure.
+      perspective.position.set(seat.x * .88, 2.9, seat.z * .88);
+      perspective.fov = portrait ? 68 : 62;
+    } else {
+      perspective.position.set(0, portrait ? 12 : 6.6, portrait ? 16 : 7.8);
+      perspective.fov = portrait ? 55 : 48;
+    }
     perspective.updateProjectionMatrix();
-    perspective.lookAt(0, 0.7, 0);
-  }, [camera, size.width, size.height]);
+    perspective.lookAt(0, 0.9, 0);
+  }, [camera, size.width, size.height, seat.x, seat.z, seatedView]);
   return null;
+}
+
+/* 飞行卡牌 — 出牌动画 */
+function FlyingCard({ card }: { card: Card }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const startPos = useRef(new THREE.Vector3(0, 1.3, 1.1));
+  const endPos = useRef(new THREE.Vector3(0, TABLE_SURFACE + .4, 0));
+  const startTime = useRef(0);
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    if (startTime.current === 0) startTime.current = state.clock.elapsedTime;
+    const t = Math.min((state.clock.elapsedTime - startTime.current) / 0.5, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    const pos = new THREE.Vector3().lerpVectors(startPos.current, endPos.current, ease);
+    pos.y += Math.sin(t * Math.PI) * 0.5;
+    groupRef.current.position.copy(pos);
+    groupRef.current.rotation.y = ease * Math.PI * 2;
+    groupRef.current.scale.setScalar(1 - ease * 0.3);
+  });
+
+  return (
+    <group ref={groupRef} position={[0, 1.2, 1.4]}>
+      <mesh rotation={[-0.2, 0, 0]}>
+        <boxGeometry args={[0.5, 0.75, 0.04]} />
+        <meshStandardMaterial color="#fff5e6" roughness={0.3} metalness={0.1} />
+      </mesh>
+      <mesh position={[0, 0, 0.025]} rotation={[-0.2, 0, 0]}>
+        <planeGeometry args={[0.45, 0.7]} />
+        <meshBasicMaterial color="#ff8fab" transparent opacity={0.9} />
+      </mesh>
+    </group>
+  );
 }
 
 function FloatingParticles({ count = 30 }: { count?: number }) {
@@ -184,16 +225,27 @@ function TableDecorations({ count = 5 }: { count?: number }) {
   );
 }
 
-export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTurn, onSelectTarget, targetMode, targetPlayerIds, selectedCardId, onReady }: GameCanvasProps) {
+export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTurn, onSelectTarget, targetMode, targetPlayerIds, selectedCardId, onReady, bannedCategory, seatedView = false }: GameCanvasProps) {
   const device = useDeviceQuality();
   const reduced = useReducedMotion();
   const [webglSupported] = useState(checkWebGL);
+  const [flyingCard, setFlyingCard] = useState<{ card: Card; progress: number } | null>(null);
   const allPlayers = room.players;
   const [tableReady, setTableReady] = useState(false);
   const [readyFigures, setReadyFigures] = useState<Set<string>>(() => new Set());
   const markTableReady = useCallback(() => setTableReady(true), []);
   const markFigureReady = useCallback((id: string) => setReadyFigures(current => current.has(id) ? current : new Set([...current, id])), []);
   useEffect(() => { if (tableReady && allPlayers.every(player => readyFigures.has(player.id))) onReady?.(); }, [tableReady, readyFigures, allPlayers, onReady]);
+
+  // 出牌动画包装
+  const handlePlayCardWithAnim = (cardId: string) => {
+    const card = CARDS.find((c) => c.id === cardId);
+    if (card && selectedCardId === cardId && !reduced) {
+      setFlyingCard({ card, progress: 0 });
+      setTimeout(() => setFlyingCard(null), 600);
+    }
+    onPlayCard(cardId);
+  };
   const seats = useSeatPositions(allPlayers.length);
   const currentScene = room.sceneId ? SCENES.find((s) => s.id === room.sceneId) : null;
   const myIndex = allPlayers.findIndex((p) => p.id === privateView.playerId);
@@ -204,6 +256,8 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
   // 手机端减少装饰数量
   const decorCount = reduced ? 0 : 3;
   const particleCount = reduced ? 0 : device.isMobile ? 8 : 16;
+  // 竖屏时增加fov确保能看到桌面
+  const cameraFov = device.isPortrait ? 75 : device.isMobile ? 65 : 62;
 
   if (!webglSupported) {
     return (
@@ -236,15 +290,15 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
       }}
     >
       <color attach="background" args={['#ece1cf']} />
-      <ResponsiveCamera />
+      <ResponsiveCamera seat={mySeat} seatedView={seatedView} />
       <OrbitControls
         makeDefault
         enablePan={false}
-        minDistance={device.isPortrait ? 16 : 7}
-        maxDistance={device.isPortrait ? 26 : 11}
+        minDistance={seatedView ? 1.5 : device.isPortrait ? 16 : 7}
+        maxDistance={seatedView ? 5.5 : device.isPortrait ? 26 : 11}
         minPolarAngle={Math.PI / 5}
-        maxPolarAngle={Math.PI / 2.35}
-        target={[0, device.isPortrait ? 0 : .9, 0]}
+        maxPolarAngle={seatedView ? Math.PI / 1.95 : Math.PI / 2.35}
+        target={[0, seatedView ? .9 : device.isPortrait ? 0 : .9, 0]}
         enableDamping={!reduced}
         dampingFactor={0.08}
         rotateSpeed={0.55}
@@ -280,6 +334,9 @@ export function GameCanvas({ room, privateView, onPlayCard, onUseSkill, onEndTur
           );
         })}
 
+
+        {seatedView && <group rotation={[0, Math.atan2(mySeat.x, mySeat.z), 0]}><HandCards cards={handCards} onPlayCard={handlePlayCardWithAnim} isMyTurn={room.activePlayerId === privateView.playerId && !room.players.find(player => player.id === privateView.playerId)?.hasActedThisTurn} selectedCardId={selectedCardId} bannedCategory={bannedCategory} /></group>}
+        {!reduced && flyingCard && <FlyingCard card={flyingCard.card} />}
         <FloatingParticles count={particleCount} />
       </Suspense>
       {device.postprocessing && (

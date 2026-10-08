@@ -4,32 +4,32 @@
       {
         "angle": 0,
         "models": 5,
-        "skin": 110,
-        "textured": 320,
+        "skin": 119,
+        "textured": 324,
         "triangles": 1,
         "room": "playing"
       },
       {
         "angle": 1.5707963267948966,
         "models": 5,
-        "skin": 110,
-        "textured": 320,
+        "skin": 119,
+        "textured": 324,
         "triangles": 1,
         "room": "playing"
       },
       {
         "angle": 3.141592653589793,
         "models": 5,
-        "skin": 110,
-        "textured": 320,
+        "skin": 119,
+        "textured": 324,
         "triangles": 1,
         "room": "playing"
       },
       {
         "angle": 4.71238898038469,
         "models": 5,
-        "skin": 110,
-        "textured": 320,
+        "skin": 119,
+        "textured": 324,
         "triangles": 1,
         "room": "playing"
       }
@@ -42,33 +42,33 @@
       {
         "angle": 0,
         "models": 5,
-        "skin": 107,
-        "textured": 317,
-        "triangles": 188924,
+        "skin": 126,
+        "textured": 324,
+        "triangles": 226436,
         "room": "playing"
       },
       {
         "angle": 1.5707963267948966,
         "models": 5,
-        "skin": 107,
-        "textured": 317,
-        "triangles": 188924,
+        "skin": 126,
+        "textured": 324,
+        "triangles": 226436,
         "room": "playing"
       },
       {
         "angle": 3.141592653589793,
         "models": 5,
-        "skin": 107,
-        "textured": 317,
-        "triangles": 188924,
+        "skin": 126,
+        "textured": 324,
+        "triangles": 226436,
         "room": "playing"
       },
       {
         "angle": 4.71238898038469,
         "models": 5,
-        "skin": 107,
-        "textured": 317,
-        "triangles": 188924,
+        "skin": 126,
+        "textured": 324,
+        "triangles": 226436,
         "room": "playing"
       }
     ],

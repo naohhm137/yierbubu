@@ -279,6 +279,36 @@
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.game3d-action-primary {
+  display: flex;
+  gap: 8px;
+}
+
+.game3d-action-secondary {
+  display: flex;
+  gap: 6px;
+}
+
+.game3d-btn-sm {
+  padding: 8px 10px !important;
+  font-size: 0.9rem !important;
+  min-width: 38px;
+}
+
+.game3d-btn-primary {
+  background: linear-gradient(135deg, #ff8fab, #ff6b9d) !important;
+  color: white !important;
+  font-weight: bold !important;
+  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.4) !important;
+  padding: 10px 20px !important;
+}
+
+.game3d-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 107, 157, 0.5) !important;
 }
 
 .game3d-btn {
@@ -516,6 +546,28 @@
 .game3d-loading-sub {
   font-size: 0.85rem;
   color: #A09080;
+}
+
+.game3d-loading-bar {
+  width: 200px;
+  height: 8px;
+  background: rgba(139, 115, 85, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.game3d-loading-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff8fab, #ffd93d);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.game3d-loading-percent {
+  font-size: 0.8rem;
+  color: #8b7355;
+  margin-top: 4px;
 }
 
 /* ---------- 响应式 — 平板 ---------- */
@@ -800,6 +852,175 @@
   }
 }
 
+/* ---------- 新手引导 ---------- */
+.game3d-tutorial-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.game3d-tutorial-box {
+  background: linear-gradient(135deg, #fff9f0, #fff5e6);
+  border-radius: 24px;
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+  animation: tutorialIn 0.4s ease-out;
+}
+
+@keyframes tutorialIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.game3d-tutorial-title {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #8b4513;
+  margin-bottom: 20px;
+}
+
+.game3d-tutorial-steps {
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.game3d-tutorial-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 0.9rem;
+  color: #5d4037;
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+
+.game3d-tutorial-step.active {
+  opacity: 1;
+}
+
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff8fab, #ff6b9d);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.game3d-tutorial-tip {
+  background: rgba(255, 143, 171, 0.15);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #8b4513;
+  margin-bottom: 16px;
+}
+
+/* ---------- 卡牌详情弹窗 ---------- */
+.game3d-card-detail {
+  position: absolute;
+  bottom: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(255, 249, 240, 0.98), rgba(255, 245, 230, 0.98));
+  border-radius: 16px;
+  padding: 14px 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 0 0 2px rgba(255, 215, 0, 0.4);
+  z-index: 50;
+  max-width: 320px;
+  text-align: center;
+  animation: cardDetailIn 0.2s ease-out;
+  pointer-events: none;
+}
+
+@keyframes cardDetailIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.game3d-card-detail-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #8b4513;
+  margin-bottom: 4px;
+}
+
+.game3d-card-detail-cat {
+  font-size: 0.75rem;
+  color: #ff8fab;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.game3d-card-detail-desc {
+  font-size: 0.85rem;
+  color: #5d4037;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.game3d-card-detail-cost {
+  font-size: 0.8rem;
+  color: #8b6914;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.game3d-card-detail-hint {
+  font-size: 0.7rem;
+  color: #a09080;
+  font-style: italic;
+}
+
+/* ---------- 屏幕效果反馈 ---------- */
+.game3d-screen-effect {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  animation: screenEffectFade 0.5s ease-out forwards;
+}
+
+.game3d-effect-damage {
+  background: radial-gradient(circle, transparent 40%, rgba(255, 50, 50, 0.35) 100%);
+  animation: damageShake 0.4s ease-out;
+}
+
+.game3d-effect-heal {
+  background: radial-gradient(circle, rgba(100, 255, 150, 0.25) 0%, transparent 70%);
+}
+
+.game3d-effect-friendship {
+  background: radial-gradient(circle, rgba(255, 150, 200, 0.3) 0%, transparent 70%);
+}
+
+@keyframes screenEffectFade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes damageShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
 /* ---------- 触摸设备优化 ---------- */
 @media (hover: none) and (pointer: coarse) {
   .game3d-btn:hover:not(:disabled) {
@@ -1026,11 +1247,11 @@
     padding: 8px 10px;
     min-height: 54px;
   }
-  .game3d-round-info { gap: 5px; }
+  .game3d-round-info { gap: 5px; order: 0; }
   .game3d-round { font-size: .76rem; padding: 5px 8px; }
   .game3d-turn-info { position: absolute; top: 58px; left: 0; right: 0; justify-content: center; }
   .game3d-active-player, .game3d-my-turn { font-size: .78rem; }
-  .game3d-top-btns { display: flex; gap: 6px; margin-right: 0; }
+  .game3d-top-btns { display: flex; gap: 6px; margin-right: 86px; order: 1; }
   .game3d-icon-btn { width: 40px; height: 40px; min-width: 40px; border-radius: 12px; font-size: 1.1rem; }
 
   .game3d-wish-panel {
@@ -1059,6 +1280,7 @@
   .game3d-action-bar { padding: 7px 8px calc(10px + env(safe-area-inset-bottom)); }
   .game3d-action-hint { font-size: .7rem; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .game3d-action-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; overflow: visible; }
+  .game3d-action-primary, .game3d-action-secondary { display: contents; }
   .game3d-btn, .game3d-btn-end { min-height: 44px; width: 100%; padding: 5px 2px; font-size: .7rem; border-radius: 10px; white-space: normal; line-height: 1.15; }
 
   .game3d-target-hint { padding-top: 132px; }
@@ -1066,8 +1288,15 @@
 }
 
 @media (max-width: 380px) and (orientation: portrait) {
+  .game3d-top-btns { gap: 4px; margin-right: 76px; }
+  .game3d-icon-btn { width: 32px; min-width: 32px; height: 40px; font-size: .95rem; }
   .game3d-my-status { right: 6px; padding-left: 6px; padding-right: 6px; }
   .game3d-my-avatar { width: 28px; height: 28px; }
   .game3d-my-stats { font-size: .6rem; }
   .game3d-hand-card { flex-basis: 102px; width: 102px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game3d-screen-effect { display: none; }
+  .game3d-turn-banner { animation: none; }
 }

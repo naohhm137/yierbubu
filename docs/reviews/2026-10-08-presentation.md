@@ -35,4 +35,3 @@ Screenshots: [desktop menu](presentation-2026-10-08/menu-desktop.png), [mobile m
 ## Integration boundary
 
 The rules state one main action per turn, and the final engine source now contains the corresponding hasActedThisTurn guard. Game-table disabled states are owned by the controller. This report verifies entry and navigation, not final GLB readiness or a full eight-round match. The practice navigation screenshot may show loading while the separate asset/rendering integration is in progress. The root owns combined builds, final 3D browser acceptance, and engine/server tests. No commit was made.
-

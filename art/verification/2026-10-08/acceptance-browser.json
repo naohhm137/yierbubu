@@ -1,0 +1,27 @@
+{
+  "completeGame": {
+    "turns": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "roundReached": 8,
+    "restarted": true,
+    "errors": []
+  },
+  "reducedMotion": {
+    "rigs": 5,
+    "overflow": false,
+    "bonesStable": true
+  },
+  "modelFallback": {
+    "rigs": 4,
+    "overflow": false,
+    "bonesStable": true
+  }
+}

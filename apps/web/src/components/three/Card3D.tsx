@@ -4,6 +4,7 @@ import { RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Card } from '@yierbubu/shared';
 import { CARD_COLORS } from './cardColors';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 interface Card3DProps {
   card: Card;
@@ -37,13 +38,15 @@ function wrapChineseText(ctx: CanvasRenderingContext2D, text: string, maxWidth: 
 }
 
 /** 生成高清卡牌正面纹理 */
-function createCardTexture(card: Card): THREE.CanvasTexture {
+function createCardTexture(card: Card, highRes = true): THREE.CanvasTexture {
   const W = 1024;
   const H = 1536;
+  const scale = highRes ? 1 : 0.5;
   const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = W * scale;
+  canvas.height = H * scale;
   const ctx = canvas.getContext('2d')!;
+  ctx.scale(scale, scale);
   const colorSet = CARD_COLORS[card.color] || CARD_COLORS.starBlue;
 
   // 背景 — 奶油色
@@ -248,6 +251,15 @@ function getCategoryName(category: string): string {
 
 // 缓存背面纹理
 let backTextureCache: THREE.CanvasTexture | null = null;
+// 缓存正面纹理 — key: cardId+resolution
+const frontTextureCache = new Map<string, THREE.CanvasTexture>();
+
+/** 检测是否为移动设备 */
+function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || window.innerWidth < 768;
+}
 
 /** 3D 卡牌 — canvas高清纹理，中文清晰 */
 export function Card3D({
@@ -264,8 +276,18 @@ export function Card3D({
   scale = 1,
 }: Card3DProps) {
   const groupRef = useRef<THREE.Group>(null);
+  const reduced = useReducedMotion();
+  const highRes = !isMobileDevice();
 
-  const frontTexture = useMemo(() => createCardTexture(card), [card]);
+  const frontTexture = useMemo(() => {
+    const key = `${card.id}-${highRes ? 'hi' : 'lo'}`;
+    let tex = frontTextureCache.get(key);
+    if (!tex) {
+      tex = createCardTexture(card, highRes);
+      frontTextureCache.set(key, tex);
+    }
+    return tex;
+  }, [card.id, highRes]);
   const backTexture = useMemo(() => {
     if (!backTextureCache) backTextureCache = createCardBackTexture();
     return backTextureCache;
@@ -274,7 +296,7 @@ export function Card3D({
   useFrame(() => {
     if (!groupRef.current) return;
     const target = isSelected ? position[1] + 0.3 : isHovered ? position[1] + 0.12 : position[1];
-    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, target, 0.15);
+    groupRef.current.position.y = reduced ? target : THREE.MathUtils.lerp(groupRef.current.position.y, target, 0.15);
   });
 
   return (

@@ -18,6 +18,7 @@ try {
   await page.waitForFunction(()=>window.testRoom?.public.phase==='playing');
   await page.locator('.game3d-container').waitFor({state:'visible'});
   await page.locator('.game3d-loading').waitFor({state:'hidden',timeout:30000});
+  if (await page.getByRole('button',{name:'开始游戏！',exact:true}).isVisible()) await page.getByRole('button',{name:'开始游戏！',exact:true}).click();
   await page.waitForFunction(async()=>{
     const {_roots}=await import('/node_modules/.vite/deps/@react-three_fiber.js');const root=_roots.get(document.querySelector('canvas'));
     if(!root)return false;let models=0;root.store.getState().scene.traverse(o=>{if(o.name==='BearRig')models++;});window.testStore=root.store;return models===5;
@@ -35,6 +36,10 @@ try {
    await page.screenshot({path:`${out}/game-${mobile?'mobile':'desktop'}-${Math.round(angle*180/Math.PI)}.png`});
    angles.push(stats);assert.equal(stats.models,5);assert.ok(stats.textured>=25);
   }
+  await page.getByRole('button',{name:'坐席视角',exact:true}).click();
+  await page.waitForTimeout(500);
+  await page.screenshot({path:`${out}/game-${mobile?'mobile':'desktop'}-seated.png`});
+  await page.getByRole('button',{name:'全桌视角',exact:true}).click();
   await page.getByRole('button',{name:'防守',exact:false}).click();
   await page.waitForFunction(()=>{const r=window.testRoom;return r.public.players.find(p=>p.id===r.private.playerId)?.hasActedThisTurn;});
   assert.equal(await page.getByRole('button',{name:'积蓄',exact:false}).isEnabled(),false);
