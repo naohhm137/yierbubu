@@ -5,10 +5,8 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    const url = window.location.hostname === 'localhost'
-      ? 'http://localhost:3001'
-      : window.location.origin;
-    socket = io(url, {
+    // Vite proxies /socket.io in development; production shares the HTTP origin.
+    socket = io(window.location.origin, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,

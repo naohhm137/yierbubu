@@ -1,6 +1,6 @@
 {
   "base": "http://localhost:3002",
-  "checkedAt": "2026-10-08T14:36:58.745Z",
+  "checkedAt": "2026-10-08T15:23:10.785Z",
   "health": {
     "status": "ok",
     "rooms": 0,
@@ -24,7 +24,10 @@
       "sha256": "c642b610588bb52f2f5c05524b8f05244d2e6bd422d1dadf1d47344e3a6e046b"
     }
   },
-  "entry": "/assets/index-CKSHU9JC.js",
+  "entry": "/assets/index-K45mdH1_.js",
+  "entryMatchesLocal": true,
+  "gameChunk": "GameTable3D-Cs-OjdBT.js",
+  "sourceMarkersVerified": true,
   "views": [
     {
       "mobile": false,
